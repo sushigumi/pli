@@ -60,8 +60,8 @@ goatOpnames
 -- parses all of them in a loop only keeps a lookout for "main"
 ------------------------------------------------------------------------------
 
-pProgram :: Parser [Func]
-pProgram 
+pProg :: Parser [Func]
+pProg 
   = do 
       funcs <- many pFunc
       return funcs
@@ -110,9 +110,33 @@ pDecl
       baseType <- pBaseType
       ident <- identifier
       whiteSpace
+      var <- pVar ident
       semi
-      return (Decl baseType ident)
+      return (Decl baseType var)
 
+pVar :: Ident -> Parser Var
+pVar ident
+  = do { char '['
+       ; first <- natural
+       ; arrayVal <- pSquare first
+       ; char ']'
+       ; case arrayVal of
+           Left (first, sec) -> return (Array2d ident first sec)
+           Right first       -> return (Array1d ident first)
+       }
+    <|>
+    do { return (Elem ident) }
+    <?> 
+    "Invalid array declaration"
+
+pSquare :: Integer -> Parser (Either (Integer, Integer) Integer)
+pSquare first
+  = do { comma 
+       ; second <- natural
+       ; return (Left (first, second)) 
+       }
+    <|>
+    do { return (Right first) }
 
 pBaseType :: Parser BaseType
 pBaseType
@@ -130,7 +154,7 @@ main
        ; args <- getArgs
        ; checkArgs progname args
        ; input <- readFile (head args)
-       ; let output = runParser pProgram 0 "" input
+       ; let output = runParser pProg 0 "" input
        ; case output of 
            Right ast -> print ast
            Left  err -> do { putStr "Parse error at "

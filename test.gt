@@ -1,10 +1,11 @@
 proc q (val float x, ref int k)
 int n;
-float y;
+float y[9];
 begin 
 end
 
 proc main()
 int m;
+float x[8,9];
 begin 
 end
