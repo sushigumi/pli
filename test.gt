@@ -1,0 +1,10 @@
+proc q (val float x, ref int k)
+int n;
+float y;
+begin 
+end
+
+proc main()
+int m;
+begin 
+end
