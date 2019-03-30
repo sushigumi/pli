@@ -1,0 +1,11 @@
+proc main()
+    int m;
+    int n;
+begin
+    if m > 0 then
+        m := n;
+        if m > 1 then
+            m := n + n;
+        fi
+    fi
+end

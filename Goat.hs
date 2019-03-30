@@ -11,6 +11,7 @@
 
 import GoatAST
 import Text.Parsec
+import Text.Parsec.Expr
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as Q
 import System.Environment
@@ -123,7 +124,7 @@ pDecl
 pStmt, pRead, pWrite, pCall, pAsg :: Parser Stmt
 
 pStmt
-  = choice [pRead, pWrite, pCall, pIf, pWhile, pAsg]
+  = choice [pIf, pWhile, pRead, pWrite, pCall, pAsg]
 
 pRead 
   = do
@@ -152,7 +153,7 @@ pIf
       reserved "if"
       exp <- pExpr
       reserved "then"
-      ifStmts <- sepBy pStmt semi
+      ifStmts <- many pStmt
       elseside <- pElse
       reserved "fi"
       case elseside of
@@ -163,7 +164,7 @@ pElse :: Parser (Either () [Stmt])
 pElse
   = do
       reserved "else"
-      stmts <- sepBy pStmt semi
+      stmts <- many pStmt
       return (Right stmts)
     <|>
     do 
@@ -174,7 +175,7 @@ pWhile
       reserved "while"
       exp <- pExpr
       reserved "do"
-      stmts <- sepBy pStmt semi
+      stmts <- many pStmt
       reserved "od"
       return (While exp stmts)
 
@@ -222,77 +223,39 @@ pSquare first
 -- Based on the unambiguous CFG: 
 --
 -------------------------------------------------------------------------------
-pExpr, pString, pTermB, pUMinus, pUNot, pNum, pIdent :: Parser Expr
-pExpr
-  = do
-      pString <|> (chainl1 pTermB pOr)
-      <?>
-      "expression"
+pExpr :: Parser Expr
+pExpr = buildExpressionParser table pTerm
+  where 
+    table = [ [prefix "-" UMinus]
+            , [binary "*" Mul, binary "/" Div]
+            , [binary "+" Add, binary "-" Sub]
+            , [relation "=" Equ, relation "!=" NotEqu, relation "<" LThan,
+               relation "<=" ELThan, relation ">" GThan, relation ">=" EGThan]
+            , [prefix "!" UNot]
+            , [binary "&&" And]
+            , [binary "||" Or] 
+            ]
+    prefix name fun
+      = Prefix (do { reservedOp name; return (UnopExpr fun) })
+    
+    binary name op
+      = Infix (do { reservedOp name; return (BinopExpr op) }) AssocLeft
+
+    relation name rel
+      = Infix (do { reservedOp name; return (BinopExpr rel) }) AssocNone
+
+    pTerm
+      = choice [pString, parens pExpr, pConst, pIdent]
+
 
 pString 
   = do
       char '"'
-      str <- many (satisfy (/= '"'))
-      char '"' 
+      str <- many (satisfy (/='"'))
+      char '"'
       return (StrConst str)
     <?>
     "string"
-
-pTermB
-  = pUNot <|> chainl1 pTermC pAnd
-    <?> 
-    "expression before or"
-
-pTermC
-   = chainl1 pTermD pAddMinus
-
-pTermD
-  = chainl1 pTermE pMulDiv
-
-pTermE
-  = choice [pUMinus, parens pExpr, pConst, pIdent]
-
-pOr, pAnd, pAddMinus, pMulDiv :: Parser (Expr -> Expr -> Expr)
-
-pOr
-  = do  
-      reservedOp "||"
-      return (BinopExpr Or)
-
-pAnd 
-  = do
-      reservedOp "&&"
-      return (BinopExpr And)
-
-pUNot
-  = do
-      reservedOp "!"
-      exp <- pTermC
-      return (UnopExpr UNot exp)
-
-pAddMinus
-  = do
-      reservedOp "+"
-      return (BinopExpr Add)
-    <|>
-    do
-      reservedOp "-"
-      return (BinopExpr Sub)
-    
-pMulDiv 
-  = do
-      reservedOp "*"
-      return (BinopExpr Mul)
-    <|>
-    do
-      reservedOp "/"
-      return (BinopExpr Div)
-
-pUMinus
-  = do
-      reservedOp "-"
-      exp <- pTermE
-      return (UnopExpr UMinus exp)
 
 pConst 
   = pBool <|> pNum

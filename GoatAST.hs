@@ -26,7 +26,7 @@ data Unop
 
 data Binop 
   = Or | And 
-  | Eq | LT | ELT | GT | EGT
+  | Equ | NotEqu | LThan | ELThan | GThan | EGThan
   | Add | Sub | Mul | Div
   deriving (Show, Eq)
 
@@ -36,7 +36,6 @@ data Expr
   | FloatConst Float
   | StrConst String
   | Id Var
-  | Parens Expr -- STC
   | BinopExpr Binop Expr Expr
   | UnopExpr Unop Expr
   deriving (Show, Eq)
