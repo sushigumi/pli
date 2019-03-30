@@ -2,10 +2,13 @@ proc q (val float x, ref int k)
 int n;
 float y[9];
 begin 
+a := true;
+k := 43;
 end
 
 proc main()
 int m;
 float x[8,9];
 begin 
+a := 43.123;
 end

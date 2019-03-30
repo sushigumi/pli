@@ -20,6 +20,36 @@ data Decl
   = Decl BaseType Var 
   deriving (Show, Eq)
 
+data Unop
+  = UNot | UMinus
+  deriving (Show, Eq)
+
+data Binop 
+  = Or | And 
+  | Eq | LT | ELT | GT | EGT
+  | Add | Sub | Mul | Div
+  deriving (Show, Eq)
+
+data Expr
+  = BoolConst Bool
+  | IntConst Int
+  | FloatConst Float
+  | StrConst String
+  | Id Var
+  | Parens Expr -- STC
+  | BinopExpr Binop Expr Expr
+  | UnopExpr Unop Expr
+  deriving (Show, Eq)
+
+data Stmt
+  = Assign Lvalue Expr
+  | Read Lvalue
+  | Write Expr
+  | Call Ident [Expr]
+  | If Expr [Stmt]
+  | IfElse Expr [Stmt] [Stmt]
+  | While Expr [Stmt]
+  deriving (Show, Eq)
 
 data FuncArg
   = Val BaseType Ident
@@ -27,5 +57,5 @@ data FuncArg
   deriving (Show, Eq)
 
 data Func
-  = Func Ident [FuncArg] [Decl]
+  = Func Ident [FuncArg] [Decl] [Stmt]
   deriving (Show, Eq)

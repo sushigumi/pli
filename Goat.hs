@@ -39,6 +39,7 @@ lexeme = Q.lexeme lexer
 natural = Q.natural lexer
 identifier = Q.identifier lexer
 colon = Q.colon lexer
+dot = Q.dot lexer
 semi = Q.semi lexer
 comma = Q.comma lexer
 parens = Q.parens lexer
@@ -71,8 +72,8 @@ pFunc
   = do { reserved "proc"
        ; name <- identifier 
        ; args <- parens (pArgs)
-       ; decl <- pBody
-       ; return (Func name args decl)
+       ; (decls, stmts) <- pBody
+       ; return (Func name args decls stmts)
        }
 
 pArgs :: Parser [FuncArg]
@@ -95,13 +96,14 @@ pArg
        ; return (Ref baseType ident)
        } 
 
-pBody :: Parser [Decl]
+pBody :: Parser ([Decl], [Stmt])
 pBody 
   = do
       decls <- many pDecl
       reserved "begin"
+      stmts <- many pStmt
       reserved "end"
-      return decls
+      return (decls, stmts)
 
 
 pDecl :: Parser Decl
@@ -114,6 +116,81 @@ pDecl
       semi
       return (Decl baseType var)
 
+-------------------------------------------------------------------------------
+-- pStmt is the main parser for statements. It wants to recognise read, write
+-- call and assignment statements
+-------------------------------------------------------------------------------
+pStmt, pRead, pWrite, pCall, pAsg :: Parser Stmt
+
+pStmt
+  = choice [pRead, pWrite, pCall, pIf, pWhile, pAsg]
+
+pRead 
+  = do
+      reserved "read"
+      lvalue <- pLvalue
+      semi
+      return (Read lvalue)
+
+pWrite 
+  = do
+      reserved "write"
+      expr <- pExpr
+      semi
+      return (Write expr)
+
+pCall 
+  = do
+      reserved "call"
+      ident <- identifier
+      exprLst <- parens (sepBy pExpr comma)
+      semi
+      return (Call ident exprLst)
+
+pIf
+  = do
+      reserved "if"
+      exp <- pExpr
+      reserved "then"
+      ifStmts <- sepBy pStmt semi
+      elseside <- pElse
+      reserved "fi"
+      case elseside of
+        Right elseStmts -> return (IfElse exp ifStmts elseStmts)
+        Left _          -> return (If exp ifStmts)
+
+pElse :: Parser (Either () [Stmt])
+pElse
+  = do
+      reserved "else"
+      stmts <- sepBy pStmt semi
+      return (Right stmts)
+    <|>
+    do 
+      return (Left ())
+
+pWhile 
+  = do
+      reserved "while"
+      exp <- pExpr
+      reserved "do"
+      stmts <- sepBy pStmt semi
+      reserved "od"
+      return (While exp stmts)
+
+pAsg
+  = do
+      lvalue <- pLvalue
+      whiteSpace
+      reservedOp ":="
+      whiteSpace
+      rvalue <- pExpr
+      semi
+      return (Assign lvalue rvalue)
+
+-------------------------------------------------------------------------------
+-- pVar is the main parser for variables whether atomic or array variables
+-------------------------------------------------------------------------------
 pVar :: Ident -> Parser Var
 pVar ident
   = do { char '['
@@ -138,6 +215,127 @@ pSquare first
     <|>
     do { return (Right first) }
 
+-------------------------------------------------------------------------------
+-- pExpr is the main parser for expressions. It takes into account the operator
+-- precedences and the fact that the binary operators are left-associative
+--
+-- Based on the unambiguous CFG: 
+--
+-------------------------------------------------------------------------------
+pExpr, pString, pTermB, pUMinus, pUNot, pNum, pIdent :: Parser Expr
+pExpr
+  = do
+      pString <|> (chainl1 pTermB pOr)
+      <?>
+      "expression"
+
+pString 
+  = do
+      char '"'
+      str <- many (satisfy (/= '"'))
+      char '"' 
+      return (StrConst str)
+    <?>
+    "string"
+
+pTermB
+  = pUNot <|> chainl1 pTermC pAnd
+    <?> 
+    "expression before or"
+
+pTermC
+   = chainl1 pTermD pAddMinus
+
+pTermD
+  = chainl1 pTermE pMulDiv
+
+pTermE
+  = choice [pUMinus, parens pExpr, pConst, pIdent]
+
+pOr, pAnd, pAddMinus, pMulDiv :: Parser (Expr -> Expr -> Expr)
+
+pOr
+  = do  
+      reservedOp "||"
+      return (BinopExpr Or)
+
+pAnd 
+  = do
+      reservedOp "&&"
+      return (BinopExpr And)
+
+pUNot
+  = do
+      reservedOp "!"
+      exp <- pTermC
+      return (UnopExpr UNot exp)
+
+pAddMinus
+  = do
+      reservedOp "+"
+      return (BinopExpr Add)
+    <|>
+    do
+      reservedOp "-"
+      return (BinopExpr Sub)
+    
+pMulDiv 
+  = do
+      reservedOp "*"
+      return (BinopExpr Mul)
+    <|>
+    do
+      reservedOp "/"
+      return (BinopExpr Div)
+
+pUMinus
+  = do
+      reservedOp "-"
+      exp <- pTermE
+      return (UnopExpr UMinus exp)
+
+pConst 
+  = pBool <|> pNum
+
+pBool
+  = do
+      reserved "true"
+      return (BoolConst True)
+    <|>
+    do
+      reserved "false"
+      return (BoolConst False)
+
+-- Parses a natural number or floating number
+-- This parses the first digit as an integer and then the '.' and then the 
+-- integer again if it is a float
+pNum 
+  = do
+      first <- natural
+      afterDot <- pAfterDot
+      case afterDot of
+        Right val -> return (FloatConst (read (show first ++ "." ++ show val) :: Float))
+        Left _    -> return (IntConst (fromInteger first :: Int))
+
+pAfterDot :: Parser (Either () Int)
+pAfterDot 
+  = do 
+      dot
+      val <- natural
+      return (Right (fromInteger val :: Int))
+    <|>
+    do
+      return (Left ()) 
+
+pIdent 
+  = do
+      ident <- identifier
+      var <- pVar ident
+      return (Id var)
+      <?>
+      "identifier"
+      
+
 pBaseType :: Parser BaseType
 pBaseType
   = do { reserved "bool"; return BoolType }
@@ -146,6 +344,15 @@ pBaseType
     <|>
     do { reserved "float"; return FloatType }
 
+pLvalue :: Parser Lvalue
+pLvalue
+  = do
+      ident <- identifier
+      whiteSpace
+      var <- pVar ident
+      return (Lvalue var)
+    <?>
+    "lvalue"
 
 
 main :: IO ()
