@@ -10,12 +10,14 @@
 -- source file. Only syntax and lexical errors are handled.
 
 import GoatAST
+import PrettyGoat
 import Text.Parsec
 import Text.Parsec.Expr
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as Q
 import System.Environment
 import System.Exit
+import System.Console.GetOpt
 
 type Parser a
   = Parsec String Int a
@@ -318,7 +320,10 @@ pLvalue
     "lvalue"
 
 -------------------------------------------------------------------------------
-
+-- This is the starting point for the Goat parser and parses the whole Goat 
+-- program and returns either the AST of the program or 
+-- if -p is specified, pretty prints the Goat program
+-------------------------------------------------------------------------------
 pMain :: Parser GoatProgram
 pMain 
   = do
@@ -330,21 +335,72 @@ pMain
 main :: IO ()
 main 
   = do { progname <- getProgName
-       ; args <- getArgs
-       ; checkArgs progname args
-       ; input <- readFile (head args)
-       ; let output = runParser pMain 0 "" input
-       ; case output of 
-           Right ast -> print ast
-           Left  err -> do { putStr "Parse error at "
-                           ; print err
-                           }
+       ; (args, files) <- getArgs >>= parseArgs
+       ; goat args files
        }
 
-checkArgs :: String -> [String] -> IO ()
-checkArgs _ [filename]
-  = return ()
-checkArgs progname _
-  = do { putStrLn ("Usage: " ++ progname ++ " filename\n\n")
-       ; exitWith (ExitFailure 1)
-       }
+goat :: [Flag] -> [String] -> IO ()
+goat args files
+  = do 
+      input <- readFile (head files)
+      let output = runParser pMain 0 "" input
+      case output of 
+        Right ast -> if Pretty `elem` args
+                       then prettyPrint ast
+                       else print ast
+        Left  err -> do { putStr "Parser error at "
+                        ; print err
+                        }
+
+-------------------------------------------------------------------------------
+-- Command line arguments handling
+-------------------------------------------------------------------------------
+data Flag
+  = Pretty
+  | Help
+  deriving (Show, Eq)
+
+flags 
+  = [Option ['p'] []            (NoArg Pretty)
+        "Pretty prints the program and outputs it to stdout"
+    ,Option []    ["help"]      (NoArg Help)
+        "Print this help message"
+    ]
+
+-- Checks the file arguments to ensure that only one file is passed in as 
+-- an argument
+checkFileArg :: [String] -> IO ()
+checkFileArg files
+  | flen < 1 = do 
+                 putStrLn ("Missing filename in arguments")
+                 exitWith (ExitFailure 1)
+  | flen > 1 = do 
+                 putStrLn ("Too many files in arguments")
+                 exitWith (ExitFailure 1) 
+  | otherwise = return ()
+  where 
+    flen = length files
+
+-- This function parses the command line arguments into more understandable 
+-- structure.
+-- Splits the options and files into two separate variables and returns them
+-- If there exists an error, the program terminates and prints an error message
+parseArgs argv 
+  = case getOpt Permute flags argv of
+      (args, fs, []) -> do
+         let files = if null fs
+                       then []
+                       else fs
+
+         -- If there is not exactly one file then print an error message
+         checkFileArg files
+         if Help `elem` args
+            then do putStrLn (usageInfo header flags)
+                    exitWith ExitSuccess
+            else return (args, files)
+
+      (_, _, errs) -> do
+         putStrLn (concat errs ++ usageInfo header flags)
+         exitWith (ExitFailure 1)
+  where
+    header = "Usage: Goat [-p] file"
