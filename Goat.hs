@@ -62,11 +62,11 @@ goatOpnames
 -- parses all of them in a loop only keeps a lookout for "main"
 ------------------------------------------------------------------------------
 
-pProg :: Parser [Func]
+pProg :: Parser GoatProgram
 pProg 
   = do 
-      funcs <- many pFunc
-      return funcs
+      funcs <- many1 pFunc
+      return (GoatProgram funcs)
 
 pFunc :: Parser Func
 pFunc
@@ -102,7 +102,7 @@ pBody
   = do
       decls <- many pDecl
       reserved "begin"
-      stmts <- many pStmt
+      stmts <- many1 pStmt
       reserved "end"
       return (decls, stmts)
 
@@ -153,7 +153,7 @@ pIf
       reserved "if"
       exp <- pExpr
       reserved "then"
-      ifStmts <- many pStmt
+      ifStmts <- many1 pStmt
       elseside <- pElse
       reserved "fi"
       case elseside of
@@ -164,7 +164,7 @@ pElse :: Parser (Either () [Stmt])
 pElse
   = do
       reserved "else"
-      stmts <- many pStmt
+      stmts <- many1 pStmt
       return (Right stmts)
     <|>
     do 
@@ -175,7 +175,7 @@ pWhile
       reserved "while"
       exp <- pExpr
       reserved "do"
-      stmts <- many pStmt
+      stmts <- many1 pStmt
       reserved "od"
       return (While exp stmts)
 
@@ -317,6 +317,15 @@ pLvalue
     <?>
     "lvalue"
 
+-------------------------------------------------------------------------------
+
+pMain :: Parser GoatProgram
+pMain 
+  = do
+      whiteSpace
+      p <- pProg
+      eof
+      return p
 
 main :: IO ()
 main 
@@ -324,7 +333,7 @@ main
        ; args <- getArgs
        ; checkArgs progname args
        ; input <- readFile (head args)
-       ; let output = runParser pProg 0 "" input
+       ; let output = runParser pMain 0 "" input
        ; case output of 
            Right ast -> print ast
            Left  err -> do { putStr "Parse error at "

@@ -58,3 +58,7 @@ data FuncArg
 data Func
   = Func Ident [FuncArg] [Decl] [Stmt]
   deriving (Show, Eq)
+
+data GoatProgram
+  = GoatProgram [Func]
+  deriving (Show, Eq)
