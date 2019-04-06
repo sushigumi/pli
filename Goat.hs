@@ -11,6 +11,7 @@
 
 import GoatAST
 import PrettyGoat
+import System.FilePath
 import Text.Parsec
 import Text.Parsec.Expr
 import Text.Parsec.Language (emptyDef)
@@ -377,7 +378,12 @@ checkFileArg files
   | flen > 1 = do 
                  putStrLn ("Too many files in arguments")
                  exitWith (ExitFailure 1) 
-  | otherwise = return ()
+  | otherwise = case takeExtension (head files) of
+                  ".gt" -> return ()
+                  _ -> do
+                         putStrLn ("Invalid file")
+                         exitWith (ExitFailure 1)
+
   where 
     flen = length files
 
