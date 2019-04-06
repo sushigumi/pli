@@ -9,8 +9,8 @@ begin
         write "a is greater than b\n";
     fi
     if a >= b then
-    write "a is greater than or equal to b\n";
+        write "a is greater than or equal to b\n";
     else
-    write "a is less than b\n"
+        write "a is less than b\n"
     fi
 end
