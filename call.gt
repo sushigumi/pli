@@ -1,5 +1,6 @@
 # call <id> ( <expr-list> )
 proc deduct(ref int i)
+begin
     i := i - 1;
 end
 
