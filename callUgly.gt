@@ -1,15 +1,17 @@
 # call <id> ( <expr-list> )
-proc deduct(ref int i)
-begin
-    i := i - 1;
+    proc deduct(ref int i)
+i
+    := i - 1;
 end
 
 proc main()
     int a;
 begin
-    a := 3;
+a := 3;
     while a > 0 do
-        call deduct(a);
+        call deduct(
+            a
+        );
         write a;
         write "\n";
     od
