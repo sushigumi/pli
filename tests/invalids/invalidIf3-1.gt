@@ -1,0 +1,7 @@
+proc main ()
+    int m;
+begin
+    if read n; then
+        n := m;
+    fi
+end

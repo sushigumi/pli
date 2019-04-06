@@ -1,0 +1,9 @@
+proc f (int m)
+begin
+    m := n;
+end
+
+proc main ()
+begin 
+    m := n;
+end
