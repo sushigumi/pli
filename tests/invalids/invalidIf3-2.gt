@@ -1,0 +1,7 @@
+proc main ()
+    int m;
+begin
+    if int m then
+        m := n;
+    fi
+end

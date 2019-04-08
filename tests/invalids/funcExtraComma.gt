@@ -1,0 +1,10 @@
+proc f (ref int m, )
+    int m;
+begin 
+    m := n;
+end
+
+proc main ()
+begin 
+    read m;
+end

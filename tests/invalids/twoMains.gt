@@ -1,0 +1,11 @@
+proc main()
+    int m;
+begin
+    m := 1;
+end
+
+proc main()
+    int m;
+begin 
+    m := 1;
+end

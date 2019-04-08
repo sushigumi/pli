@@ -1,0 +1,11 @@
+proc (val float x, ref int k)
+    int n;
+begin
+    
+end
+
+proc main ()
+    int n;
+begin 
+    read n;
+end

@@ -1,0 +1,37 @@
+# Array in gt
+
+proc main()
+    # 1D array
+    int a[3];
+    int i;
+
+    # 2D array
+    float b[4, 5];
+    int j;
+    int k;
+begin
+    a := [1, 2, 3];
+    i := 0;
+    while i < 3 do
+        write a[i];
+        write "\n";
+        i := i + 1;
+    od
+
+    j := 0;
+    k := 0;
+    while j < 4 do
+        while k < 5 do
+            a[j, k] := k + j * 4;
+        od
+    od
+
+    j := 0;
+    k := 0;
+    while j < 4 do
+        while k < 5 do
+            write a[j, k];
+            write "\n";
+        od
+    od
+end
