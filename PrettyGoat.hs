@@ -122,7 +122,7 @@ printStmt (If expr stmts) n =
     printExpr expr
     putStrLn " then"
     printStmts stmts (n+1)
-    putStrLn (ident n ++ "fi")
+    putStrLn (indent n ++ "fi")
 
 printStmt (IfElse expr stmtsIf stmtsElse) n =
   do
@@ -136,7 +136,7 @@ printStmt (IfElse expr stmtsIf stmtsElse) n =
 
 printStmt (While expr stmts) n =
   do
-    putStr (indent n + "while ")
+    putStr (indent n ++ "while ")
     printExpr expr
     putStrLn " do"
     printStmts stmts (n+1)
@@ -156,14 +156,14 @@ printLvalue :: Lvalue -> IO ()
 printLvalue (Lvalue var) = printVar var
 
 printExpr :: Expr -> IO ()
-
+printExpr expr = putStr "Expr"
 -------------------------------------------------------------------------------
 -- indent is a function used to return blank spaces for indentation
 -- the parameter passed determines level of indentation. E.g. 1 means 4 spaces
 -- 2 means 8 spaces, etc.
 -------------------------------------------------------------------------------
 indent :: Int -> String
-ident n = take (n*4) (repeat ' ')
+indent n = take (n*4) (repeat ' ')
 
 -------------------------------------------------------------------------------
 -- prettyPrint is the top level function used to pretty print a Goat program
