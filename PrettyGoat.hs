@@ -1,5 +1,5 @@
--- TODO: Need to handle indentation. Ignore temporarily
 -- TODO: Remove last empty line
+-- TODO: Expr printing..
 
 module PrettyGoat where
 import GoatAST
@@ -156,7 +156,30 @@ printLvalue :: Lvalue -> IO ()
 printLvalue (Lvalue var) = printVar var
 
 printExpr :: Expr -> IO ()
-printExpr expr = putStr "Expr"
+printExpr (BoolConst b) = putStr (show b)
+printExpr (IntConst i) = putStr (show i)
+printExpr (FloatConst f) = putStr (show f)
+printExpr (StrConst s) = putStr s
+printExpr (Id var) = printVar var
+printExpr (BinopExpr binop exprL exprR) =
+  do
+    putStr "("
+    printExpr exprL
+    printBinop binop
+    printExpr exprR
+    putStr ")"
+printExpr (UnopExpr unop expr) =
+  do
+    printUnop unop
+    printExpr expr
+
+printBinop :: Binop -> IO ()
+printBinop op = putStr (" " ++ "binop" ++ " ")
+
+printUnop :: Unop -> IO ()
+printUnop UNot = putStr "!"
+printUnop UMinus = putStr "-"
+
 -------------------------------------------------------------------------------
 -- indent is a function used to return blank spaces for indentation
 -- the parameter passed determines level of indentation. E.g. 1 means 4 spaces
