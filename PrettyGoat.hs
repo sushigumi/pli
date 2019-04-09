@@ -1,4 +1,5 @@
 -- TODO: Need to handle indentation. Ignore temporarily
+-- TODO: Remove last empty line
 
 module PrettyGoat where
 import GoatAST
@@ -62,7 +63,7 @@ printDecls (decl:decls) =
 printDecl :: Decl -> IO ()
 printDecl (Decl baseType var) =
   do
-    putStr "    "
+    putStr (indent 1)
     printBaseType baseType
     printVar var
     putStrLn ";"
@@ -81,16 +82,88 @@ printVar (Array2d ident i j) =
 printStmts [] _ = return ()
 printStmts (st:stmts) n =
   do
-    indentation <- printStmt st n
-    printStmts stmts indentation
+    printStmt st n
+    printStmts stmts n
 
-printStmt :: Stmt -> IO ()
+
+printStmt :: Stmt -> Int -> IO ()
+
 printStmt (Assign l expr) n =
   do
-    printLvalue l n
-    return n
+    putStr (indent n)
+    printLvalue l
+    putStr " := "
+    printExpr expr
+    putStrLn ";"
+
+printStmt (Read l) n =
+  do
+    putStr (indent n ++ "read ")
+    printLvalue l
+    putStrLn ";"
+
+printStmt (Write expr) n =
+  do
+    putStr (indent n ++ "write ")
+    printExpr expr
+    putStrLn ";"
+
+printStmt (Call ident exprs) n =
+  do
+    putStr (indent n ++ "call ")
+    printIdent ident
+    putStr "("
+    printExprs exprs
+    putStrLn ");"
+
+printStmt (If expr stmts) n =
+  do
+    putStr (indent n ++ "if ")
+    printExpr expr
+    putStrLn " then"
+    printStmts stmts (n+1)
+    putStrLn (ident n ++ "fi")
+
+printStmt (IfElse expr stmtsIf stmtsElse) n =
+  do
+    putStr (indent n ++ "if ")
+    printExpr expr
+    putStrLn " then"
+    printStmts stmtsIf (n+1)
+    putStrLn (indent n ++ "else")
+    printStmts stmtsElse (n+1)
+    putStrLn (indent n ++ "fi")
+
+printStmt (While expr stmts) n =
+  do
+    putStr (indent n + "while ")
+    printExpr expr
+    putStrLn " do"
+    printStmts stmts (n+1)
+    putStrLn (indent n ++ "od")
+
+
+printExprs :: [Expr] -> IO ()
+printExprs [] = return ()
+printExprs [x] = printExpr x
+printExprs (e:exprs) =
+  do
+    printExpr e
+    putStr ", "
+    printExprs exprs
 
 printLvalue :: Lvalue -> IO ()
+printLvalue (Lvalue var) = printVar var
+
+printExpr :: Expr -> IO ()
+
+-------------------------------------------------------------------------------
+-- indent is a function used to return blank spaces for indentation
+-- the parameter passed determines level of indentation. E.g. 1 means 4 spaces
+-- 2 means 8 spaces, etc.
+-------------------------------------------------------------------------------
+indent :: Int -> String
+ident n = take (n*4) (repeat ' ')
 
 -------------------------------------------------------------------------------
 -- prettyPrint is the top level function used to pretty print a Goat program
