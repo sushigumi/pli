@@ -163,15 +163,38 @@ printExpr (StrConst s) = putStr s
 printExpr (Id var) = printVar var
 printExpr (BinopExpr binop exprL exprR) =
   do
-    putStr "("
-    printExpr exprL
+    if isBinopExpr exprL then
+      do
+        putStr "("
+        printExpr exprL
+        putStr ")"
+    else
+      printExpr exprL
     printBinop binop
-    printExpr exprR
-    putStr ")"
+    if isBinopExpr exprR then
+      do
+        putStr "("
+        printExpr exprR
+        putStr ")"
+    else
+      printExpr exprR
+
 printExpr (UnopExpr unop expr) =
   do
     printUnop unop
     printExpr expr
+
+-------------------------------------------------------------------------------
+-- isBinopExpr is a function used to determine whether an expr is binary op expr
+-------------------------------------------------------------------------------
+isBinopExpr :: Expr -> Bool
+isBinopExpr (BinopExpr _ _ _) = True
+isBinopExpr (BoolConst _) = False
+isBinopExpr (IntConst _) = False
+isBinopExpr (FloatConst _) = False
+isBinopExpr (StrConst _) = False
+isBinopExpr (Id _) = False
+isBinopExpr (UnopExpr _ _) = False
 
 printBinop :: Binop -> IO ()
 printBinop Or = putStr " || "
