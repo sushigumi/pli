@@ -174,7 +174,18 @@ printExpr (UnopExpr unop expr) =
     printExpr expr
 
 printBinop :: Binop -> IO ()
-printBinop op = putStr (" " ++ "binop" ++ " ")
+printBinop Or = putStr " || "
+printBinop And = putStr " && "
+printBinop Equ = putStr " = "
+printBinop NotEqu = putStr " != "
+printBinop LThan = putStr " < "
+printBinop ELThan = putStr " <= "
+printBinop GThan = putStr " > "
+printBinop EGThan = putStr " >= "
+printBinop Add = putStr " + "
+printBinop Sub = putStr " - "
+printBinop Mul = putStr " * "
+printBinop Div = putStr " / "
 
 printUnop :: Unop -> IO ()
 printUnop UNot = putStr "!"
