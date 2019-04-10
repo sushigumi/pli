@@ -159,7 +159,7 @@ printExpr :: Expr -> IO ()
 printExpr (BoolConst b) = putStr (show b)
 printExpr (IntConst i) = putStr (show i)
 printExpr (FloatConst f) = putStr (show f)
-printExpr (StrConst s) = putStr s
+printExpr (StrConst s) = putStr ("\"" ++ s ++ "\"")
 printExpr (Id var) = printVar var
 printExpr (BinopExpr binop exprL exprR) =
   do
