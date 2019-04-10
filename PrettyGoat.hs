@@ -1,5 +1,4 @@
 -- TODO: Remove last empty line
--- TODO: Expr printing..
 
 module PrettyGoat where
 import GoatAST
@@ -19,7 +18,6 @@ printFunc (Func ident args decls stmts)
       putStrLn "begin"
       printStmts stmts 1
       putStrLn "end"
-      putStrLn ""
 
 -------------------------------------------------------------------------------
 -- printIdent is a function used to print all the function and variable names
@@ -156,7 +154,7 @@ printLvalue :: Lvalue -> IO ()
 printLvalue (Lvalue var) = printVar var
 
 printExpr :: Expr -> IO ()
-printExpr (BoolConst b) = putStr (show b)
+printExpr (BoolConst b) = if b then putStr "true" else putStr "false"
 printExpr (IntConst i) = putStr (show i)
 printExpr (FloatConst f) = putStr (show f)
 printExpr (StrConst s) = putStr ("\"" ++ s ++ "\"")
@@ -227,9 +225,11 @@ indent n = take (n*4) (repeat ' ')
 -- based on an AST (abstract syntax tree) generated for the code
 -------------------------------------------------------------------------------
 prettyPrint :: GoatProgram -> IO ()
-prettyPrint (GoatProgram []) 
+prettyPrint (GoatProgram [])
   = return ()
+prettyPrint (GoatProgram [f]) = printFunc f
 prettyPrint (GoatProgram (f:funcs))
   = do
       printFunc f
+      putStrLn ""
       prettyPrint (GoatProgram funcs)
