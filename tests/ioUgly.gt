@@ -12,7 +12,7 @@ begin
         read 
         mood;
     write mood;
-        write "\nYour first number was ";
+        write "Your first number was ";
     write x;
-    write "/n";
+    write " ";
 end

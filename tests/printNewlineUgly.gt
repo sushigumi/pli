@@ -1,5 +1,5 @@
 proc main ()
     int m;
 begin
-                write " "
+                write " ";
 end

@@ -9,12 +9,11 @@ proc main()
       int j;
     int k;
 begin
-a := [1, 2, 3];
     i := 0;
             while i < 3
     do
         write a[i];
-        write "\n";
+        write " ";
         i := i + 1; od
 
         j := 0;
@@ -30,6 +29,6 @@ j := 0;
     while j < 4 do
 while k < 5 do
         write a[j, k];
-            write "\n";od
+            write " ";od
     od
 end

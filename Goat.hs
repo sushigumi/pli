@@ -392,12 +392,15 @@ goat task file
       let output = runParser pMain 0 "" input
       case output of 
         Right ast -> if task == Pretty
-                       then prettyPrint ast
+                       then do
+                              prettyPrint ast
+                              exitWith ExitSuccess
                        else do
                               putStrLn ("Sorry, cannot generate code yet")
                               exitWith ExitSuccess
         Left  err -> do { putStr "Parser error at "
                         ; print err
+                        ; exitWith (ExitFailure 1)
                         }
 
 -------------------------------------------------------------------------------

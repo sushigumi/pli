@@ -7,6 +7,6 @@ begin
     a > 0
 do
         write a;
-        write "\n";
+        write " ";
         a := a - 1;od
 end
