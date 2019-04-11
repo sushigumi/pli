@@ -54,8 +54,9 @@ reservedOp = Q.reservedOp lexer
 goatReserved, goatOpnames :: [String]
 
 goatReserved 
-  = ["begin", "bool", "do", "else", "end", "false", "fi", "float", "if", "int",
-     "od", "proc", "read", "ref", "then", "true", "val", "while", "write"]
+  = ["begin", "bool", "call", "do", "else", "end", "false", "fi", "float", 
+     "if", "int", "od", "proc", "read", "ref", "then", "true", "val", "while", 
+     "write"]
 
 goatOpnames
   = ["||", "&&", "!", "=", "!=", "<", "<=", ">", ">=", "+", "-", "*", "/"]
@@ -74,7 +75,7 @@ pProg
 pFunc :: Parser Func
 pFunc
   = do { reserved "proc"
-       ; name <- identifier 
+       ; name <- identifier <?> "function name"
        ; args <- parens (pArgs)
        ; (decls, stmts) <- pBody
        ; return (Func name args decls stmts)
@@ -99,13 +100,15 @@ pArg
        ; ident <- identifier
        ; return (Ref baseType ident)
        } 
+    <?>
+    "function parameter starting with 'ref' or 'val'"
 
 pBody :: Parser ([Decl], [Stmt])
 pBody 
   = do
       decls <- many pDecl
       reserved "begin"
-      stmts <- many1 pStmt
+      stmts <- many1 pStmt <?> "at least 1 statement"
       reserved "end"
       return (decls, stmts)
 
@@ -116,7 +119,7 @@ pDecl
       baseType <- pBaseType
       ident <- identifier
       whiteSpace
-      var <- pVar ident
+      var <- pVar ident 
       semi
       return (Decl baseType var)
 
@@ -124,10 +127,12 @@ pDecl
 -- pStmt is the main parser for statements. It wants to recognise read, write
 -- call and assignment statements
 -------------------------------------------------------------------------------
-pStmt, pRead, pWrite, pCall, pAsg :: Parser Stmt
+pStmt, pRead, pWrite, pCall, pIf, pWhile, pAsg :: Parser Stmt
 
 pStmt
   = choice [pIf, pWhile, pRead, pWrite, pCall, pAsg]
+    <?>
+    "statement"
 
 pRead 
   = do
@@ -146,7 +151,7 @@ pWrite
 pCall 
   = do
       reserved "call"
-      ident <- identifier
+      ident <- identifier <?> "function identifier after call"
       exprLst <- parens (sepBy pExpr comma)
       semi
       return (Call ident exprLst)
@@ -156,18 +161,19 @@ pIf
       reserved "if"
       exp <- pExpr
       reserved "then"
-      ifStmts <- many1 pStmt
+      ifStmts <- many1 pStmt <?> "at least 1 statement"
       elseside <- pElse
       reserved "fi"
       case elseside of
         Right elseStmts -> return (IfElse exp ifStmts elseStmts)
         Left _          -> return (If exp ifStmts)
 
+-- Helper for If to pass the else portion if it exists
 pElse :: Parser (Either () [Stmt])
 pElse
   = do
       reserved "else"
-      stmts <- many1 pStmt
+      stmts <- many1 pStmt <?> "at least 1 statement"
       return (Right stmts)
     <|>
     do 
@@ -178,7 +184,7 @@ pWhile
       reserved "while"
       exp <- pExpr
       reserved "do"
-      stmts <- many1 pStmt
+      stmts <- many1 pStmt <?> "at least 1 statment"
       reserved "od"
       return (While exp stmts)
 
@@ -198,22 +204,22 @@ pAsg
 pVar :: Ident -> Parser Var
 pVar ident
   = do { char '['
-       ; first <- natural
+       ; first <- natural <?> "size or initializer for variable with array type"
        ; arrayVal <- pSquare first
-       ; char ']'
+       ; char ']' <?> "']' to close array"
        ; case arrayVal of
            Left (first, sec) -> return (Array2d ident first sec)
            Right first       -> return (Array1d ident first)
        }
     <|>
     do { return (Elem ident) }
-    <?> 
-    "Invalid array declaration"
+    <?>
+    "variable"
 
 pSquare :: Integer -> Parser (Either (Integer, Integer) Integer)
 pSquare first
   = do { comma 
-       ; second <- natural
+       ; second <- natural <?> "']', size or initializer for array variable"
        ; return (Left (first, second)) 
        }
     <|>
@@ -227,7 +233,7 @@ pSquare first
 --
 -------------------------------------------------------------------------------
 pExpr :: Parser Expr
-pExpr = buildExpressionParser table pTerm
+pExpr = buildExpressionParser table pTerm <?> "expression"
   where 
     table = [ [prefix "-" UMinus]
             , [binary "*" Mul, binary "/" Div]
@@ -261,7 +267,7 @@ pString
     "string"
 
 pConst 
-  = pBool <|> pNum
+  = pBool <|> pNum <?> "boolean or number constant"
 
 pBool
   = do
@@ -283,15 +289,18 @@ pNum
         Right val -> return (FloatConst (read (show first ++ "." ++ show val) :: Float))
         Left _    -> return (IntConst (fromInteger first :: Int))
 
+-- DO I NEED A ERR HERE?
+
 pAfterDot :: Parser (Either () Int)
 pAfterDot 
   = do 
       dot
-      val <- natural
+      val <- natural <?> "number after '.'"
       return (Right (fromInteger val :: Int))
     <|>
     do
       return (Left ()) 
+   
 
 pIdent 
   = do
@@ -309,6 +318,8 @@ pBaseType
     do { reserved "int"; return IntType }
     <|>
     do { reserved "float"; return FloatType }
+    <?>
+    "type declaration"
 
 pLvalue :: Parser Lvalue
 pLvalue
