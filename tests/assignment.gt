@@ -1,0 +1,5 @@
+proc main ()
+    int m;
+begin
+    m := m + n * 2 / 3 - 2 + 23 * (1234 + 123);
+end

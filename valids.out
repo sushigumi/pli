@@ -1,0 +1,34 @@
+Running valid test
+Testing array.gt
+Parser error at (line 13, column 10):
+unexpected "["
+expecting string, "(", "true", "false", natural or identifier
+
+Testing arrayUgly.gt
+Parser error at (line 12, column 6):
+unexpected "["
+expecting string, "(", "true", "false", natural or identifier
+
+Testing asgUgly.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "a"),Decl IntType (Elem "b")] [Assign (Lvalue (Elem "a")) (BinopExpr Add (BinopExpr Add (BinopExpr Add (BinopExpr Mul (IntConst 2) (BinopExpr Add (IntConst 1) (IntConst 10))) (IntConst 2)) (BinopExpr Mul (IntConst 2) (IntConst 2))) (IntConst 14)),Write (Id (Elem "a")),Write (StrConst "\\n"),Assign (Lvalue (Elem "b")) (BinopExpr Add (UnopExpr UMinus (Id (Elem "a"))) (Id (Elem "a"))),Write (Id (Elem "b")),Write (StrConst "\\n")]]
+
+Testing call.gt
+GoatProgram [Func "deduct" [Ref IntType "i"] [] [Assign (Lvalue (Elem "i")) (BinopExpr Sub (Id (Elem "i")) (IntConst 1))],Func "main" [] [Decl IntType (Elem "a")] [Assign (Lvalue (Elem "a")) (IntConst 3),While (BinopExpr GThan (Id (Elem "a")) (IntConst 0)) [Call "deduct" [Id (Elem "a")],Write (Id (Elem "a")),Write (StrConst "\\n")]]]
+
+Testing callUgly.gt
+Parser error at (line 3, column 1):
+unexpected "i"
+expecting "bool", "int", "float" or "begin"
+
+Testing ioUgly.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "x"),Decl IntType (Elem "A_38"),Decl BoolType (Elem "mood")] [Write (StrConst "Give us a number, please: "),Read (Lvalue (Elem "x")),Write (StrConst "And another: "),Read (Lvalue (Elem "A_38")),Write (StrConst "Happy and you know it (true/false): "),Read (Lvalue (Elem "mood")),Write (Id (Elem "mood")),Write (StrConst "\\nYour first number was "),Write (Id (Elem "x")),Write (StrConst "/n")]]
+
+Testing loopUgly.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "a")] [Assign (Lvalue (Elem "a")) (IntConst 5),While (BinopExpr GThan (Id (Elem "a")) (IntConst 0)) [Write (Id (Elem "a")),Write (StrConst "\\n"),Assign (Lvalue (Elem "a")) (BinopExpr Sub (Id (Elem "a")) (IntConst 1))]]]
+
+Testing opUgly.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "a"),Decl IntType (Elem "b"),Decl FloatType (Elem "d"),Decl FloatType (Elem "e"),Decl BoolType (Elem "g"),Decl BoolType (Elem "h")] [Assign (Lvalue (Elem "a")) (IntConst 3),Assign (Lvalue (Elem "b")) (IntConst 4),Write (BinopExpr Div (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr Mul (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr Add (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr Sub (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr LThan (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr GThan (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr ELThan (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr EGThan (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr Equ (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (BinopExpr NotEqu (Id (Elem "a")) (Id (Elem "b"))),Write (StrConst "\\n"),Write (UnopExpr UMinus (Id (Elem "a"))),Write (StrConst "\\n"),Assign (Lvalue (Elem "d")) (FloatConst 1.2),Assign (Lvalue (Elem "e")) (UnopExpr UMinus (FloatConst 1.5)),Write (BinopExpr Div (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr Mul (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr Add (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr Sub (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr LThan (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr GThan (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr ELThan (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr EGThan (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr Equ (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Write (BinopExpr NotEqu (Id (Elem "d")) (Id (Elem "e"))),Write (StrConst "\\n"),Assign (Lvalue (Elem "g")) (BoolConst True),Assign (Lvalue (Elem "h")) (BoolConst False),Write (BinopExpr LThan (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (BinopExpr GThan (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (BinopExpr ELThan (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (BinopExpr EGThan (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (BinopExpr Equ (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (BinopExpr NotEqu (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (BinopExpr And (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (BinopExpr Or (Id (Elem "g")) (Id (Elem "h"))),Write (StrConst "\\n"),Write (UnopExpr UNot (Id (Elem "g"))),Write (StrConst "\\n")]]
+
+Testing statement.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "a"),Decl IntType (Elem "b")] [Assign (Lvalue (Elem "a")) (IntConst 2),Assign (Lvalue (Elem "b")) (IntConst 4),If (BinopExpr GThan (Id (Elem "a")) (Id (Elem "b"))) [Write (StrConst "a is greater than b\\n")],IfElse (BinopExpr EGThan (Id (Elem "a")) (Id (Elem "b"))) [Write (StrConst "a is greater than or equal to b\\n")] [Write (StrConst "a is less than b\\n")]]]
+
