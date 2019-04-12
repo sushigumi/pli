@@ -224,8 +224,10 @@ pAsg
 pVar :: Ident -> Parser Var
 pVar ident
   = do { char '['
+       ; whiteSpace
        ; first <- pExpr <?> "size or initializer for variable with array type"
        ; arrayVal <- pSquare first
+       ; whiteSpace
        ; char ']' <?> "']' to close array"
        ; case arrayVal of
            Left (first, sec) -> return (Array2d ident first sec)
@@ -241,7 +243,9 @@ pVar ident
 -- both numbers
 pSquare :: Expr -> Parser (Either (Expr, Expr) Expr)
 pSquare first
-  = do { comma 
+  = do { whiteSpace 
+       ; comma 
+       ; whiteSpace
        ; second <- pExpr <?> "']', size or initializer for array variable"
        ; return (Left (first, second)) 
        }
