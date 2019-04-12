@@ -1,0 +1,169 @@
+Testing pretty printing
+tests/arrayUgly.gt
+Parser error at (line 15, column 17):
+unexpected "i"
+expecting size or initializer for variable with array type
+
+tests/asgUgly.gt
+proc main ()
+    int a;
+    int b;
+begin
+    a := (((2 * (1 + 10)) + 2) + (2 * 2)) + 14;
+    write a;
+    write " ";
+    b := -a + a;
+    write b;
+    write " ";
+end
+
+tests/assignmentsUgly.gt
+proc main ()
+    int m;
+    bool asdf;
+    float Basdf;
+    int asdf_;
+    float asdfb';
+    bool asdf123;
+begin
+    asdf123 := true;
+end
+
+tests/callUgly.gt
+proc deduct (ref int i)
+begin
+    i := i - 1;
+end
+
+proc main ()
+    int a;
+begin
+    a := 3;
+    while a > 0 do
+        call deduct(a);
+        write a;
+        write " ";
+    od
+end
+
+tests/commentsUgly.gt
+proc main ()
+    int m;
+begin
+    m := n;
+end
+
+tests/ioUgly.gt
+proc main ()
+    int x;
+    int A_38;
+    bool mood;
+begin
+    write "Give us a number, please: ";
+    read x;
+    write "And another: ";
+    read A_38;
+    write "Happy and you know it (true/false): ";
+    read mood;
+    write mood;
+    write "Your first number was ";
+    write x;
+    write " ";
+end
+
+tests/loopUgly.gt
+proc main ()
+    int a;
+begin
+    a := 5;
+    while a > 0 do
+        write a;
+        write " ";
+        a := a - 1;
+    od
+end
+
+tests/opUgly.gt
+proc main ()
+    int a;
+    int b;
+    float d;
+    float e;
+    bool g;
+    bool h;
+begin
+    a := 3;
+    b := 4;
+    write a / b;
+    write " ";
+    write a * b;
+    write " ";
+    write a + b;
+    write " ";
+    write a - b;
+    write " ";
+    write a < b;
+    write " ";
+    write a > b;
+    write " ";
+    write a <= b;
+    write " ";
+    write a >= b;
+    write " ";
+    write a = b;
+    write " ";
+    write a != b;
+    write " ";
+    write -a;
+    write " ";
+    d := 1.2;
+    e := -1.5;
+    write d / e;
+    write " ";
+    write d * e;
+    write " ";
+    write d + e;
+    write " ";
+    write d - e;
+    write " ";
+    write d < e;
+    write " ";
+    write d > e;
+    write " ";
+    write d <= e;
+    write " ";
+    write d >= e;
+    write " ";
+    write d = e;
+    write " ";
+    write d != e;
+    write " ";
+    g := true;
+    h := false;
+    write g < h;
+    write " ";
+    write g > h;
+    write " ";
+    write g <= h;
+    write " ";
+    write g >= h;
+    write " ";
+    write g = h;
+    write " ";
+    write g != h;
+    write " ";
+    write g && h;
+    write " ";
+    write g || h;
+    write " ";
+    write !g;
+    write " ";
+end
+
+tests/printNewlineUgly.gt
+proc main ()
+    int m;
+begin
+    write " ";
+end
+

@@ -11,14 +11,12 @@
 
 import GoatAST
 import PrettyGoat
-import System.FilePath
 import Text.Parsec
 import Text.Parsec.Expr
 import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as Q
 import System.Environment
 import System.Exit
-import System.Console.GetOpt
 
 type Parser a
   = Parsec String Int a
@@ -54,8 +52,9 @@ reservedOp = Q.reservedOp lexer
 goatReserved, goatOpnames :: [String]
 
 goatReserved 
-  = ["begin", "bool", "do", "else", "end", "false", "fi", "float", "if", "int",
-     "od", "proc", "read", "ref", "then", "true", "val", "while", "write"]
+  = ["begin", "bool", "call", "do", "else", "end", "false", "fi", "float", 
+     "if", "int", "od", "proc", "read", "ref", "then", "true", "val", "while", 
+     "write"]
 
 goatOpnames
   = ["||", "&&", "!", "=", "!=", "<", "<=", ">", ">=", "+", "-", "*", "/"]
@@ -71,14 +70,25 @@ pProg
       funcs <- many1 pFunc
       return (GoatProgram funcs)
 
+-------------------------------------------------------------------------------
+-- pFunc parses functions and looks for the keyword 'proc' and parses 
+-- the function name, its arguments, and then the function body
+-------------------------------------------------------------------------------
+
 pFunc :: Parser Func
 pFunc
   = do { reserved "proc"
-       ; name <- identifier 
+       ; name <- identifier <?> "function name"
        ; args <- parens (pArgs)
        ; (decls, stmts) <- pBody
        ; return (Func name args decls stmts)
        }
+
+-------------------------------------------------------------------------------
+-- pArgs parses the arguments of the functions. It wants to recognize whether
+-- there is a keyword of 'val' or 'ref' followed by a basetype and then an
+-- identifier.
+-------------------------------------------------------------------------------
 
 pArgs :: Parser [FuncArg]
 pArgs
@@ -99,16 +109,27 @@ pArg
        ; ident <- identifier
        ; return (Ref baseType ident)
        } 
+    <?>
+    "function parameter starting with 'ref' or 'val'"
+
+-------------------------------------------------------------------------------
+-- pBody parses the function body. It looks for a sequence of declarations 
+-- followed by a sequence of statements. The statements are enclosed by 
+-- keywords 'begin' and 'end'
+-------------------------------------------------------------------------------
 
 pBody :: Parser ([Decl], [Stmt])
 pBody 
   = do
       decls <- many pDecl
       reserved "begin"
-      stmts <- many1 pStmt
+      stmts <- many1 pStmt <?> "at least 1 statement"
       reserved "end"
       return (decls, stmts)
 
+-------------------------------------------------------------------------------
+-- pDecl looks for a sequence of one or more declarations
+-------------------------------------------------------------------------------
 
 pDecl :: Parser Decl
 pDecl
@@ -116,18 +137,21 @@ pDecl
       baseType <- pBaseType
       ident <- identifier
       whiteSpace
-      var <- pVar ident
+      var <- pVar ident 
       semi
       return (Decl baseType var)
 
 -------------------------------------------------------------------------------
 -- pStmt is the main parser for statements. It wants to recognise read, write
--- call and assignment statements
+-- call, if, if else, while and assignment statements
 -------------------------------------------------------------------------------
-pStmt, pRead, pWrite, pCall, pAsg :: Parser Stmt
+
+pStmt, pRead, pWrite, pCall, pIf, pWhile, pAsg :: Parser Stmt
 
 pStmt
   = choice [pIf, pWhile, pRead, pWrite, pCall, pAsg]
+    <?>
+    "statement"
 
 pRead 
   = do
@@ -146,7 +170,7 @@ pWrite
 pCall 
   = do
       reserved "call"
-      ident <- identifier
+      ident <- identifier <?> "function identifier after call"
       exprLst <- parens (sepBy pExpr comma)
       semi
       return (Call ident exprLst)
@@ -156,18 +180,19 @@ pIf
       reserved "if"
       exp <- pExpr
       reserved "then"
-      ifStmts <- many1 pStmt
+      ifStmts <- many1 pStmt <?> "at least 1 statement"
       elseside <- pElse
       reserved "fi"
       case elseside of
         Right elseStmts -> return (IfElse exp ifStmts elseStmts)
         Left _          -> return (If exp ifStmts)
 
+-- Helper for If to pass the else portion if it exists
 pElse :: Parser (Either () [Stmt])
 pElse
   = do
       reserved "else"
-      stmts <- many1 pStmt
+      stmts <- many1 pStmt <?> "at least 1 statement"
       return (Right stmts)
     <|>
     do 
@@ -178,7 +203,7 @@ pWhile
       reserved "while"
       exp <- pExpr
       reserved "do"
-      stmts <- many1 pStmt
+      stmts <- many1 pStmt <?> "at least 1 statment"
       reserved "od"
       return (While exp stmts)
 
@@ -198,22 +223,25 @@ pAsg
 pVar :: Ident -> Parser Var
 pVar ident
   = do { char '['
-       ; first <- natural
+       ; first <- natural <?> "size or initializer for variable with array type"
        ; arrayVal <- pSquare first
-       ; char ']'
+       ; char ']' <?> "']' to close array"
        ; case arrayVal of
            Left (first, sec) -> return (Array2d ident first sec)
            Right first       -> return (Array1d ident first)
        }
     <|>
     do { return (Elem ident) }
-    <?> 
-    "Invalid array declaration"
+    <?>
+    "variable"
 
+-- Parses the second half of an array, which is after the comma.
+-- If there is no comma, then just return the first number, else returns
+-- both numbers
 pSquare :: Integer -> Parser (Either (Integer, Integer) Integer)
 pSquare first
   = do { comma 
-       ; second <- natural
+       ; second <- natural <?> "']', size or initializer for array variable"
        ; return (Left (first, second)) 
        }
     <|>
@@ -227,7 +255,7 @@ pSquare first
 --
 -------------------------------------------------------------------------------
 pExpr :: Parser Expr
-pExpr = buildExpressionParser table pTerm
+pExpr = buildExpressionParser table pTerm <?> "expression"
   where 
     table = [ [prefix "-" UMinus]
             , [binary "*" Mul, binary "/" Div]
@@ -250,18 +278,30 @@ pExpr = buildExpressionParser table pTerm
     pTerm
       = choice [pString, parens pExpr, pConst, pIdent]
 
+-------------------------------------------------------------------------------
+-- pString, pConst, pBool and pNum parses a constant respectively
+-------------------------------------------------------------------------------
+pString, pConst, pBool, pNum, pIdent :: Parser Expr
 
 pString 
   = do
       char '"'
-      str <- many (satisfy (/='"'))
+      str <- many pCharacter
       char '"'
       return (StrConst str)
     <?>
-    "string"
+    "constant"
+
+pCharacter
+  = do
+      char '\\'
+      (noneOf ("nt") <?> "not a newline or tab character")
+    <|>
+    do 
+      satisfy (/= '"')
 
 pConst 
-  = pBool <|> pNum
+  = pBool <|> pNum <?> "constant"
 
 pBool
   = do
@@ -283,16 +323,18 @@ pNum
         Right val -> return (FloatConst (read (show first ++ "." ++ show val) :: Float))
         Left _    -> return (IntConst (fromInteger first :: Int))
 
+-- Parses a natural number after the '.' if it is a float, else returns nothing
 pAfterDot :: Parser (Either () Int)
 pAfterDot 
   = do 
       dot
-      val <- natural
+      val <- natural <?> "number after '.'"
       return (Right (fromInteger val :: Int))
     <|>
     do
       return (Left ()) 
-
+   
+-- Parses an identifier
 pIdent 
   = do
       ident <- identifier
@@ -309,6 +351,8 @@ pBaseType
     do { reserved "int"; return IntType }
     <|>
     do { reserved "float"; return FloatType }
+    <?>
+    "type declaration"
 
 pLvalue :: Parser Lvalue
 pLvalue
@@ -336,77 +380,58 @@ pMain
 main :: IO ()
 main 
   = do { progname <- getProgName
-       ; (args, files) <- getArgs >>= parseArgs
-       ; goat args files
+       ; args <- getArgs 
+       ; (task, file) <- checkArgs progname args
+       ; goat task file
        }
 
-goat :: [Flag] -> [String] -> IO ()
-goat args files
+goat :: Task -> String -> IO ()
+goat task file
   = do 
-      input <- readFile (head files)
+      input <- readFile file
       let output = runParser pMain 0 "" input
       case output of 
-        Right ast -> if Pretty `elem` args
-                       then prettyPrint ast
-                       else print ast
+        Right ast -> if task == Pretty
+                       then do
+                              prettyPrint ast
+                              exitWith ExitSuccess
+                       else do
+                              putStrLn ("Sorry, cannot generate code yet")
+                              exitWith ExitSuccess
         Left  err -> do { putStr "Parser error at "
                         ; print err
+                        ; exitWith (ExitFailure 1)
                         }
 
 -------------------------------------------------------------------------------
--- Command line arguments handling
+-- Handling command line arguments
 -------------------------------------------------------------------------------
-data Flag
+data Task
   = Pretty
-  | Help
+  | Compile
   deriving (Show, Eq)
 
-flags 
-  = [Option ['p'] []            (NoArg Pretty)
-        "Pretty prints the program and outputs it to stdout"
-    ,Option []    ["help"]      (NoArg Help)
-        "Print this help message"
-    ]
-
--- Checks the file arguments to ensure that only one file is passed in as 
--- an argument
-checkFileArg :: [String] -> IO ()
-checkFileArg files
-  | flen < 1 = do 
-                 putStrLn ("Missing filename in arguments")
-                 exitWith (ExitFailure 1)
-  | flen > 1 = do 
-                 putStrLn ("Too many files in arguments")
-                 exitWith (ExitFailure 1) 
-  | otherwise = case takeExtension (head files) of
-                  ".gt" -> return ()
-                  _ -> do
-                         putStrLn ("Invalid file")
+checkArgs :: String -> [String] -> IO (Task, String)
+checkArgs progname args
+  | length args == 0 = do
+                         putStrLn ("Missing filename")
+                         exitWith (ExitFailure 1)
+  | length args == 1 = do
+                         task <- parseTask ""
+                         return (task, head args)
+  | length args == 2 = do 
+                         task <- parseTask $ head args
+                         return (task, last args)
+  | otherwise        = do
+                         putStrLn ("Too many arguments")
+                         putStrLn ("Usage: " ++ progname ++ "[-p] filename")
                          exitWith (ExitFailure 1)
 
-  where 
-    flen = length files
 
--- This function parses the command line arguments into more understandable 
--- structure.
--- Splits the options and files into two separate variables and returns them
--- If there exists an error, the program terminates and prints an error message
-parseArgs argv 
-  = case getOpt Permute flags argv of
-      (args, fs, []) -> do
-         let files = if null fs
-                       then []
-                       else fs
-
-         -- If there is not exactly one file then print an error message
-         checkFileArg files
-         if Help `elem` args
-            then do putStrLn (usageInfo header flags)
-                    exitWith ExitSuccess
-            else return (args, files)
-
-      (_, _, errs) -> do
-         putStrLn (concat errs ++ usageInfo header flags)
-         exitWith (ExitFailure 1)
-  where
-    header = "Usage: Goat [-p] file"
+parseTask :: String -> IO Task
+parseTask option
+  | option == "-p" = return Pretty
+  | option == ""   = return Compile
+  | otherwise      = do 
+                        putStrLn ("Invalid options used")
+                        exitWith (ExitFailure 1)

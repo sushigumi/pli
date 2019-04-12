@@ -1,0 +1,7 @@
+# Comments
+# Comments
+proc main ()
+    int m;
+begin
+    m := n;
+end

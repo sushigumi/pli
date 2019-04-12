@@ -1,0 +1,7 @@
+proc main ()
+    int m;
+begin
+    while n > 1  
+        m := n;
+    od
+end

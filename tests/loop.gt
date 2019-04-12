@@ -1,0 +1,11 @@
+# while loop
+proc main()
+    int a;
+begin
+    a := 5;
+    while a > 0 do
+        write a;
+        write "\n";
+        a := a - 1;
+    od
+end

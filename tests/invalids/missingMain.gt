@@ -1,0 +1,11 @@
+proc main ()
+    int m;
+begin 
+    read m;
+end
+
+proc main ()
+    int n;
+begin
+    read n;
+end

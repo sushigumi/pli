@@ -1,0 +1,5 @@
+proc main ()
+    int m;
+begin
+    read m < n;
+end

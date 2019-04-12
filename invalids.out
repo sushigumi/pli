@@ -1,0 +1,183 @@
+Testing invalid syntax
+Testing tests/invalids/beginMisspell.gt
+Parser error at (line 3, column 1):
+unexpected "g"
+expecting type declaration or "begin"
+
+Testing tests/invalids/call.gt
+Parser error at (line 4, column 15):
+unexpected ":"
+expecting variable, operator, "," or ")"
+
+Testing tests/invalids/call1.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Call "id" [Id (Elem "id")]]]
+
+Testing tests/invalids/funcExtraComma.gt
+Parser error at (line 1, column 20):
+unexpected ")"
+expecting function parameter starting with 'ref' or 'val'
+
+Testing tests/invalids/invalidArray1.gt
+Parser error at (line 2, column 11):
+unexpected "]"
+expecting size or initializer for variable with array type
+
+Testing tests/invalids/invalidArray2.gt
+Parser error at (line 2, column 13):
+unexpected "]"
+expecting ']', size or initializer for array variable
+
+Testing tests/invalids/invalidArray3.gt
+Parser error at (line 2, column 12):
+unexpected "."
+expecting digit, "," or ']' to close array
+
+Testing tests/invalids/invalidArray4.gt
+Parser error at (line 2, column 11):
+unexpected ","
+expecting size or initializer for variable with array type
+
+Testing tests/invalids/invalidIf1.gt
+Parser error at (line 5, column 9):
+unexpected "m"
+expecting ".", operator, "=", "!=", "<", "<=", ">", ">=" or "then"
+
+Testing tests/invalids/invalidIf2.gt
+Parser error at (line 7, column 4):
+unexpected reserved word "end"
+expecting statement
+
+Testing tests/invalids/invalidIf3-1.gt
+Parser error at (line 4, column 12):
+unexpected reserved word "read"
+expecting expression
+
+Testing tests/invalids/invalidIf3-2.gt
+Parser error at (line 4, column 11):
+unexpected reserved word "int"
+expecting expression
+
+Testing tests/invalids/invalidIf4-1.gt
+Parser error at (line 5, column 11):
+unexpected "<"
+expecting variable or ":="
+
+Testing tests/invalids/invalidIf4-2.gt
+Parser error at (line 5, column 12):
+unexpected reserved word "int"
+expecting at least 1 statement
+
+Testing tests/invalids/invalidWhile1.gt
+Parser error at (line 5, column 9):
+unexpected "m"
+expecting ".", operator, "=", "!=", "<", "<=", ">", ">=" or "do"
+
+Testing tests/invalids/invalidWhile2.gt
+Parser error at (line 6, column 4):
+unexpected reserved word "end"
+expecting statement
+
+Testing tests/invalids/invalidWhile3-1.gt
+Parser error at (line 4, column 13):
+unexpected ":"
+expecting variable, operator or "do"
+
+Testing tests/invalids/invalidWhile3-2.gt
+Parser error at (line 4, column 14):
+unexpected reserved word "int"
+expecting expression
+
+Testing tests/invalids/invalidWhile4-1.gt
+Parser error at (line 5, column 11):
+unexpected ">"
+expecting variable or ":="
+
+Testing tests/invalids/invalidWrite.gt
+Parser error at (line 4, column 13):
+unexpected "\n"
+expecting operator or ";"
+
+Testing tests/invalids/invalidWriteNewline.gt
+Parser error at (line 4, column 17):
+unexpected "n"
+expecting not a newline or tab character
+
+Testing tests/invalids/invalidWriteTab.gt
+Parser error at (line 4, column 17):
+unexpected "t"
+expecting not a newline or tab character
+
+Testing tests/invalids/missingBegin.gt
+Parser error at (line 4, column 5):
+unexpected "r"
+expecting type declaration or "begin"
+
+Testing tests/invalids/missingBrackets.gt
+Parser error at (line 2, column 5):
+unexpected "i"
+expecting "("
+
+Testing tests/invalids/missingEnd.gt
+Parser error at (line 6, column 1):
+unexpected end of input
+expecting statement or "end"
+
+Testing tests/invalids/missingFuncIdent.gt
+Parser error at (line 1, column 6):
+unexpected "("
+expecting function name
+
+Testing tests/invalids/missingMain.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Read (Lvalue (Elem "m"))],Func "main" [] [Decl IntType (Elem "n")] [Read (Lvalue (Elem "n"))]]
+
+Testing tests/invalids/missingRef.gt
+Parser error at (line 1, column 9):
+unexpected "i"
+expecting function parameter starting with 'ref' or 'val' or ")"
+
+Testing tests/invalids/missingSemiDecl.gt
+Parser error at (line 3, column 1):
+unexpected "b"
+expecting variable or ";"
+
+Testing tests/invalids/missingSemiStmt.gt
+Parser error at (line 5, column 1):
+unexpected "e"
+expecting variable or ";"
+
+Testing tests/invalids/readExpr.gt
+Parser error at (line 4, column 12):
+unexpected "<"
+expecting variable or ";"
+
+Testing tests/invalids/readStmt.gt
+Parser error at (line 4, column 12):
+unexpected ":"
+expecting variable or ";"
+
+Testing tests/invalids/tripleEquals.gt
+Parser error at (line 4, column 17):
+unexpected "o"
+ambiguous use of a non associative operator
+
+Testing tests/invalids/twoMains.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Assign (Lvalue (Elem "m")) (IntConst 1)],Func "main" [] [Decl IntType (Elem "m")] [Assign (Lvalue (Elem "m")) (IntConst 1)]]
+
+Testing tests/invalids/twoPlus.gt
+Parser error at (line 4, column 14):
+unexpected "+"
+expecting constant, "(" or identifier
+
+Testing tests/invalids/twoSemis.gt
+Parser error at (line 2, column 11):
+unexpected ";"
+expecting type declaration or "begin"
+
+Testing tests/invalids/writeId.gt
+GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Write (Id (Elem "m"))]]
+
+Testing tests/invalids/writeStmt.gt
+Parser error at (line 4, column 13):
+unexpected ":"
+expecting variable, operator or ";"
+

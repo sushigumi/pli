@@ -1,0 +1,5 @@
+proc main ()
+    int m;
+
+    read m;
+end

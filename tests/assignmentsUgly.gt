@@ -1,0 +1,10 @@
+proc main ()
+ int m;
+                bool asdf;
+    float Basdf;
+    int asdf_;
+    float asdfb';
+    bool asdf123;
+begin
+    asdf123 := true;
+end

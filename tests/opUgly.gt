@@ -1,0 +1,87 @@
+# Int, Float, Bool operations
+
+proc main()
+    int a;
+    int b;
+
+    float d;
+    float e;
+
+    bool g;
+    bool h;
+
+begin
+    a := 3;
+    b := 4;
+    write a
+        / b;
+    write " ";
+    write a *
+b;
+    write " ";
+    write a + b;
+    write " ";write a
+    - b;write
+    " ";
+    write a < b;
+    write " ";
+    write a > b;
+    write " ";
+    write a <= b;
+    write " ";
+                write a >= b;
+    write " ";write a = b;
+    write " ";
+    write a != b;
+    write " ";
+    write -a;
+    write " ";
+    d :=
+        1.2;
+    e := -1.5;
+    write d / e;
+    write " ";write
+    d * e;
+    write " ";
+    write d + e;
+    write " ";
+    write d - e;
+    write " ";
+    write d < e;
+    write " ";
+    write d > e;
+    write " ";
+    write d <= e;
+    write " ";
+    write d >= e;
+    write " ";
+    write d = e;
+    write " ";
+    write d != e;
+    write " ";
+    g := true;
+    h := false;
+    write g < h;
+    write " ";
+    write g > h;
+    write " ";
+    write g
+        <= h;
+    write " ";
+    write g >= h;
+    write " ";
+    write g = h;
+    write " ";
+    write g
+        !=
+        h;
+    write " ";
+    write g && h;
+    write " ";
+    write g ||
+        h;
+    write " ";
+    write !
+            g;
+    write " ";
+end
