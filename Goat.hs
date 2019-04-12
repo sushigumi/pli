@@ -224,10 +224,8 @@ pAsg
 pVar :: Ident -> Parser Var
 pVar ident
   = do { char '['
-       ; whiteSpace
-       ; first <- pExpr <?> "size or initializer for variable with array type"
+       ; first <- natural <?> "size or initializer for variable with array type"
        ; arrayVal <- pSquare first
-       ; whiteSpace
        ; char ']' <?> "']' to close array"
        ; case arrayVal of
            Left (first, sec) -> return (Array2d ident first sec)
@@ -241,12 +239,10 @@ pVar ident
 -- Parses the second half of an array, which is after the comma.
 -- If there is no comma, then just return the first number, else returns
 -- both numbers
-pSquare :: Expr -> Parser (Either (Expr, Expr) Expr)
+pSquare :: Integer -> Parser (Either (Integer, Integer) Integer)
 pSquare first
-  = do { whiteSpace 
-       ; comma 
-       ; whiteSpace
-       ; second <- pExpr <?> "']', size or initializer for array variable"
+  = do { comma 
+       ; second <- natural <?> "']', size or initializer for array variable"
        ; return (Left (first, second)) 
        }
     <|>
@@ -255,9 +251,6 @@ pSquare first
 -------------------------------------------------------------------------------
 -- pExpr is the main parser for expressions. It takes into account the operator
 -- precedences and the fact that the binary operators are left-associative
---
--- Based on the unambiguous CFG: 
---
 -------------------------------------------------------------------------------
 pExpr :: Parser Expr
 pExpr = buildExpressionParser table pTerm <?> "expression"
@@ -281,7 +274,7 @@ pExpr = buildExpressionParser table pTerm <?> "expression"
       = Infix (do { reservedOp name; return (BinopExpr rel) }) AssocNone
 
     pTerm
-      = choice [pString, parens pExpr, pConst, pIdent]
+      = choice [pIdent, pString, parens pExpr, pConst]
 
 -------------------------------------------------------------------------------
 -- pString, pConst, pBool and pNum parses a constant respectively

@@ -8,8 +8,8 @@ data BaseType
 
 data Var
   = Elem Ident
-  | Array1d Ident Expr
-  | Array2d Ident Expr Expr 
+  | Array1d Ident Integer 
+  | Array2d Ident Integer Integer
   deriving (Show, Eq)
 
 data Lvalue
