@@ -10,7 +10,6 @@ proc main()
     int j;
     int k;
 begin
-    a := [1, 2, 3];
     i := 0;
     while i < 3 do
         write a[i];

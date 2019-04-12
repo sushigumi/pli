@@ -14,5 +14,5 @@ begin
     write mood;
         write "Your first number was ";
     write x;
-    write " ";
+    write " \n";
 end

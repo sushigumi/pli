@@ -15,73 +15,73 @@ begin
     b := 4;
     write a
         / b;
-    write " ";
+    write "\n";
     write a *
 b;
-    write " ";
+    write "\n";
     write a + b;
-    write " ";write a
+    write "\n";write a
     - b;write
-    " ";
+    "\n";
     write a < b;
-    write " ";
+    write "\n";
     write a > b;
-    write " ";
+    write "\n";
     write a <= b;
-    write " ";
+    write "\n";
                 write a >= b;
-    write " ";write a = b;
-    write " ";
+    write "\n";write a = b;
+    write "\n";
     write a != b;
-    write " ";
+    write "\n";
     write -a;
-    write " ";
+    write "\n";
     d :=
         1.2;
     e := -1.5;
     write d / e;
-    write " ";write
+    write "\n";write
     d * e;
-    write " ";
+    write "\n";
     write d + e;
-    write " ";
+    write "\n";
     write d - e;
-    write " ";
+    write "\n";
     write d < e;
-    write " ";
+    write "\n";
     write d > e;
-    write " ";
+    write "\n";
     write d <= e;
-    write " ";
+    write "\n";
     write d >= e;
-    write " ";
+    write "\n";
     write d = e;
-    write " ";
+    write "\n";
     write d != e;
-    write " ";
+    write "\n";
     g := true;
     h := false;
     write g < h;
-    write " ";
+    write "\n";
     write g > h;
-    write " ";
+    write "\n";
     write g
         <= h;
-    write " ";
+    write "\n";
     write g >= h;
-    write " ";
+    write "\n";
     write g = h;
-    write " ";
+    write "\n";
     write g
         !=
         h;
-    write " ";
+    write "\n";
     write g && h;
-    write " ";
+    write "\n";
     write g ||
         h;
-    write " ";
+    write "\n";
     write !
             g;
-    write " ";
+    write "\n";
 end

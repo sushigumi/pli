@@ -10,7 +10,11 @@ unexpected ":"
 expecting variable, operator, "," or ")"
 
 Testing tests/invalids/call1.gt
-GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Call "id" [Id (Elem "id")]]]
+proc main ()
+    int m;
+begin
+    call id(id);
+end
 
 Testing tests/invalids/funcExtraComma.gt
 Parser error at (line 1, column 20):
@@ -28,9 +32,9 @@ unexpected "]"
 expecting ']', size or initializer for array variable
 
 Testing tests/invalids/invalidArray3.gt
-Parser error at (line 2, column 12):
-unexpected "."
-expecting digit, "," or ']' to close array
+Parser error at (line 2, column 15):
+unexpected "\n"
+expecting ";"
 
 Testing tests/invalids/invalidArray4.gt
 Parser error at (line 2, column 11):
@@ -98,14 +102,16 @@ unexpected "\n"
 expecting operator or ";"
 
 Testing tests/invalids/invalidWriteNewline.gt
-Parser error at (line 4, column 17):
-unexpected "n"
-expecting not a newline or tab character
+Parser error at (line 4, column 16):
+unexpected "\n"
+expecting "\""
 
 Testing tests/invalids/invalidWriteTab.gt
-Parser error at (line 4, column 17):
-unexpected "t"
-expecting not a newline or tab character
+proc main ()
+    int m;
+begin
+    write "asdf\t";
+end
 
 Testing tests/invalids/missingBegin.gt
 Parser error at (line 4, column 5):
@@ -128,7 +134,17 @@ unexpected "("
 expecting function name
 
 Testing tests/invalids/missingMain.gt
-GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Read (Lvalue (Elem "m"))],Func "main" [] [Decl IntType (Elem "n")] [Read (Lvalue (Elem "n"))]]
+proc main ()
+    int m;
+begin
+    read m;
+end
+
+proc main ()
+    int n;
+begin
+    read n;
+end
 
 Testing tests/invalids/missingRef.gt
 Parser error at (line 1, column 9):
@@ -161,7 +177,17 @@ unexpected "o"
 ambiguous use of a non associative operator
 
 Testing tests/invalids/twoMains.gt
-GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Assign (Lvalue (Elem "m")) (IntConst 1)],Func "main" [] [Decl IntType (Elem "m")] [Assign (Lvalue (Elem "m")) (IntConst 1)]]
+proc main ()
+    int m;
+begin
+    m := 1;
+end
+
+proc main ()
+    int m;
+begin
+    m := 1;
+end
 
 Testing tests/invalids/twoPlus.gt
 Parser error at (line 4, column 14):
@@ -174,7 +200,11 @@ unexpected ";"
 expecting type declaration or "begin"
 
 Testing tests/invalids/writeId.gt
-GoatProgram [Func "main" [] [Decl IntType (Elem "m")] [Write (Id (Elem "m"))]]
+proc main ()
+    int m;
+begin
+    write m;
+end
 
 Testing tests/invalids/writeStmt.gt
 Parser error at (line 4, column 13):

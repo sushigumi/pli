@@ -1,5 +1,6 @@
 proc main ()
     int m;
 begin
-    write "asdf\n";
+    write "asdf
+            ";
 end

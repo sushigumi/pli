@@ -8,6 +8,7 @@
 --    where source_file is a Goat source file
 -- In this version 1, semantic errors are ignored when pretty-printing the Goat
 -- source file. Only syntax and lexical errors are handled.
+module Main where
 
 import GoatAST
 import PrettyGoat
@@ -223,7 +224,7 @@ pAsg
 pVar :: Ident -> Parser Var
 pVar ident
   = do { char '['
-       ; first <- natural <?> "size or initializer for variable with array type"
+       ; first <- pExpr <?> "size or initializer for variable with array type"
        ; arrayVal <- pSquare first
        ; char ']' <?> "']' to close array"
        ; case arrayVal of
@@ -238,10 +239,10 @@ pVar ident
 -- Parses the second half of an array, which is after the comma.
 -- If there is no comma, then just return the first number, else returns
 -- both numbers
-pSquare :: Integer -> Parser (Either (Integer, Integer) Integer)
+pSquare :: Expr -> Parser (Either (Expr, Expr) Expr)
 pSquare first
   = do { comma 
-       ; second <- natural <?> "']', size or initializer for array variable"
+       ; second <- pExpr <?> "']', size or initializer for array variable"
        ; return (Left (first, second)) 
        }
     <|>
@@ -283,22 +284,18 @@ pExpr = buildExpressionParser table pTerm <?> "expression"
 -------------------------------------------------------------------------------
 pString, pConst, pBool, pNum, pIdent :: Parser Expr
 
+-- pString parses a string but the string literal must be defined on a single
+-- line and cannot consists of '\n'  or '\t' literaly in input but can include
+-- these characters in the string itself
 pString 
   = do
       char '"'
-      str <- many pCharacter
+      str <- many (noneOf "\n\t\"")
       char '"'
       return (StrConst str)
     <?>
     "constant"
 
-pCharacter
-  = do
-      char '\\'
-      (noneOf ("nt") <?> "not a newline or tab character")
-    <|>
-    do 
-      satisfy (/= '"')
 
 pConst 
   = pBool <|> pNum <?> "constant"
@@ -387,21 +384,20 @@ main
 
 goat :: Task -> String -> IO ()
 goat task file
-  = do 
-      input <- readFile file
-      let output = runParser pMain 0 "" input
-      case output of 
-        Right ast -> if task == Pretty
-                       then do
-                              prettyPrint ast
-                              exitWith ExitSuccess
-                       else do
-                              putStrLn ("Sorry, cannot generate code yet")
-                              exitWith ExitSuccess
-        Left  err -> do { putStr "Parser error at "
-                        ; print err
-                        ; exitWith (ExitFailure 1)
-                        }
+  | task == Compile = do
+                        putStrLn ("Sorry, cannot generate code yet")
+                        exitWith ExitSuccess
+  | task == Pretty = do
+                       input <- readFile file
+                       let output = runParser pMain 0 "" input
+                       case output of 
+                         Right ast -> do
+                                        prettyPrint ast
+                                        exitWith ExitSuccess
+                         Left  err -> do { putStr "Parser error at "
+                                         ; print err
+                                         ; exitWith (ExitFailure 1)
+                                         }
 
 -------------------------------------------------------------------------------
 -- Handling command line arguments

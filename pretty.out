@@ -1,8 +1,34 @@
 Testing pretty printing
 tests/arrayUgly.gt
-Parser error at (line 15, column 17):
-unexpected "i"
-expecting size or initializer for variable with array type
+proc main ()
+    int a[IntConst 3];
+    int i;
+    float b[IntConst 4, IntConst 5];
+    int j;
+    int k;
+begin
+    i := 0;
+    while i < 3 do
+        write a[Id (Elem "i")];
+        write " ";
+        i := i + 1;
+    od
+    j := 0;
+    k := 0;
+    while j < 4 do
+        while k < 5 do
+            a[Id (Elem "j"), Id (Elem "k")] := k + (j * 4);
+        od
+    od
+    j := 0;
+    k := 0;
+    while j < 4 do
+        while k < 5 do
+            write a[Id (Elem "j"), Id (Elem "k")];
+            write " ";
+        od
+    od
+end
 
 tests/asgUgly.gt
 proc main ()
@@ -68,7 +94,7 @@ begin
     write mood;
     write "Your first number was ";
     write x;
-    write " ";
+    write " \n";
 end
 
 tests/loopUgly.gt
@@ -95,69 +121,69 @@ begin
     a := 3;
     b := 4;
     write a / b;
-    write " ";
+    write "\n";
     write a * b;
-    write " ";
+    write "\n";
     write a + b;
-    write " ";
+    write "\n";
     write a - b;
-    write " ";
+    write "\n";
     write a < b;
-    write " ";
+    write "\n";
     write a > b;
-    write " ";
+    write "\n";
     write a <= b;
-    write " ";
+    write "\n";
     write a >= b;
-    write " ";
+    write "\n";
     write a = b;
-    write " ";
+    write "\n";
     write a != b;
-    write " ";
+    write "\n";
     write -a;
-    write " ";
+    write "\n";
     d := 1.2;
     e := -1.5;
     write d / e;
-    write " ";
+    write "\n";
     write d * e;
-    write " ";
+    write "\n";
     write d + e;
-    write " ";
+    write "\n";
     write d - e;
-    write " ";
+    write "\n";
     write d < e;
-    write " ";
+    write "\n";
     write d > e;
-    write " ";
+    write "\n";
     write d <= e;
-    write " ";
+    write "\n";
     write d >= e;
-    write " ";
+    write "\n";
     write d = e;
-    write " ";
+    write "\n";
     write d != e;
-    write " ";
+    write "\n";
     g := true;
     h := false;
     write g < h;
-    write " ";
+    write "\n";
     write g > h;
-    write " ";
+    write "\n";
     write g <= h;
-    write " ";
+    write "\n";
     write g >= h;
-    write " ";
+    write "\n";
     write g = h;
-    write " ";
+    write "\n";
     write g != h;
-    write " ";
+    write "\n";
     write g && h;
-    write " ";
+    write "\n";
     write g || h;
-    write " ";
+    write "\n";
     write !g;
-    write " ";
+    write "\n";
 end
 
 tests/printNewlineUgly.gt

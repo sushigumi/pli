@@ -1,0 +1,12 @@
+proc main ()
+    int m;
+    int n;
+begin
+    m := n + m;
+    m := n + n + n;
+    m := n + m * n;
+    m := n + m / n;
+    m := m / n + m;
+    m := m + n || m;
+    m := !n + m;
+end
