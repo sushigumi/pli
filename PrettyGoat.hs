@@ -212,6 +212,19 @@ printExpr (UnopExpr unop expr) =
 
 
 -------------------------------------------------------------------------------
+-- isBinopExpr is a function used to determine whether an expr is binary op expr
+-------------------------------------------------------------------------------
+isBinopExpr :: Expr -> Bool
+isBinopExpr (BinopExpr _ _ _) = True
+isBinopExpr (BoolConst _) = False
+isBinopExpr (IntConst _) = False
+isBinopExpr (FloatConst _) = False
+isBinopExpr (StrConst _) = False
+isBinopExpr (Id _) = False
+isBinopExpr (UnopExpr _ _) = False
+
+
+-------------------------------------------------------------------------------
 -- print out binary operator
 -------------------------------------------------------------------------------
 printBinop :: Binop -> IO ()
