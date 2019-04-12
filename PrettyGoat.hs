@@ -74,15 +74,21 @@ printDecl (Decl baseType var) =
 printVar :: Var -> IO ()
 printVar (Elem ident) = printIdent ident
 
-printVar (Array1d ident i) =
+printVar (Array1d ident expr) =
   do
     printIdent ident
-    putStr ("[" ++ show i ++ "]")
+    putStr "["
+    printExpr expr
+    putStr "]"
 
-printVar (Array2d ident i j) =
+printVar (Array2d ident exprL exprR) =
   do
     printIdent ident
-    putStr ("[" ++ show i ++ ", " ++ show j ++ "]")
+    putStr "["
+    printExpr exprL
+    putStr ", "
+    printExpr exprR
+    putStr "]"
 
 
 -------------------------------------------------------------------------------
@@ -212,19 +218,6 @@ printExpr (UnopExpr unop expr) =
 
 
 -------------------------------------------------------------------------------
--- isBinopExpr is a function used to determine whether an expr is binary op expr
--------------------------------------------------------------------------------
-isBinopExpr :: Expr -> Bool
-isBinopExpr (BinopExpr _ _ _) = True
-isBinopExpr (BoolConst _) = False
-isBinopExpr (IntConst _) = False
-isBinopExpr (FloatConst _) = False
-isBinopExpr (StrConst _) = False
-isBinopExpr (Id _) = False
-isBinopExpr (UnopExpr _ _) = False
-
-
--------------------------------------------------------------------------------
 -- print out binary operator
 -------------------------------------------------------------------------------
 printBinop :: Binop -> IO ()
@@ -289,3 +282,15 @@ prettyPrint (GoatProgram (f:funcs))
 -------------------------------------------------------------------------------
 indent :: Int -> String
 indent n = take (n*4) (repeat ' ')
+
+-------------------------------------------------------------------------------
+-- isBinopExpr is a function used to determine whether an expr is binary op expr
+-------------------------------------------------------------------------------
+isBinopExpr :: Expr -> Bool
+isBinopExpr (BinopExpr _ _ _) = True
+isBinopExpr (BoolConst _) = False
+isBinopExpr (IntConst _) = False
+isBinopExpr (FloatConst _) = False
+isBinopExpr (StrConst _) = False
+isBinopExpr (Id _) = False
+isBinopExpr (UnopExpr _ _) = False
