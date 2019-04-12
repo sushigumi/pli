@@ -229,6 +229,7 @@ pVar ident
        ; arrayVal <- pSquare first
        ; whiteSpace
        ; char ']' <?> "']' to close array"
+       ; whiteSpace
        ; case arrayVal of
            Left (first, sec) -> return (Array2d ident first sec)
            Right first       -> return (Array1d ident first)
