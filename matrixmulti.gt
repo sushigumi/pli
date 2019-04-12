@@ -1,0 +1,28 @@
+proc main()
+    int x[2, 3];
+    int y[3, 2];
+    int i;
+    int j;
+begin
+    i := 0;
+    j := 0;
+    while i < 2 do
+        while j < 3 do
+            x[i, j] := i*3 + j;
+            j := j + 1;
+        od
+        i := i + 1;
+    od
+
+    i := 0;
+    j := 0;
+    while i < 3 do
+        while j < 2 do
+            y[i, j] := i*2 + j;
+            j := j + 1;
+        od
+        i := i + 1;
+    od
+
+    write x[2, 3] * y[3, 2];
+end
