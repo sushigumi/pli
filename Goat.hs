@@ -1,4 +1,6 @@
 -- Goat.hs
+-- Authors: Wen Tze Joshua Leong (wleong3)
+--          Yiyue Wang (yiyue)
 -- The compiler for the programming language Goat. 
 -- To compile a program:
 --  * Goat source_file 

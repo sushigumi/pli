@@ -1,3 +1,9 @@
+-- GoatAST.hs
+-- Authors: Wen Tze Joshua Leong (wleong3)
+--          Yiyue Wang (yiyue)
+-- This file contains the data types which are used to create an Abstract
+-- Syntax Tree for a Goat program.
+
 module GoatAST where
 
 type Ident = String
