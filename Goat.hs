@@ -20,6 +20,7 @@ import Text.Parsec.Language (emptyDef)
 import qualified Text.Parsec.Token as Q
 import System.Environment
 import System.Exit
+import CodeGen
 
 type Parser a
   = Parsec String Int a
@@ -391,20 +392,21 @@ main
 
 goat :: Task -> String -> IO ()
 goat task file
-  | task == Compile = do
-                        putStrLn ("Sorry, cannot generate code yet")
-                        exitWith ExitSuccess
-  | task == Pretty = do
-                       input <- readFile file
-                       let output = runParser pMain 0 "" input
-                       case output of 
-                         Right ast -> do
-                                        prettyPrint ast
-                                        exitWith ExitSuccess
-                         Left  err -> do { putStr "Parser error at "
-                                         ; print err
-                                         ; exitWith (ExitFailure 1)
-                                         }
+  = do
+      input <- readFile file
+      let output = runParser pMain 0 "" input
+      case output of
+        Right ast -> case task of
+                       Compile -> do
+                                    genCode ast
+                                    exitWith ExitSuccess
+                       Pretty  -> do
+                                    prettyPrint ast
+                                    exitWith ExitSuccess
+        Left err  -> do 
+                       putStr "Parser error at "
+                       print err
+                       exitWith (ExitFailure 1)
 
 -------------------------------------------------------------------------------
 -- Handling command line arguments
