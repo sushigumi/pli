@@ -1,3 +1,12 @@
+-- PrettyGoat.hs
+-- Authors: Wen Tze Joshua Leong (wleong3)
+--          Yiyue Wang (yiyue)
+-- This file contains functions for pretty printing a Goat program basd on an
+-- Abstract Syntax Tree provided after parsing the Goat program.
+-- Pretty Printer entry point is prettyPrint {ast} where ast is an abstract
+-- syntax tree based on data structures declared in GoatAST.hs
+-- This pretty printer prints to stdout
+
 module PrettyGoat where
 import GoatAST
 
