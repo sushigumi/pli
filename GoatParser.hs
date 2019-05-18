@@ -67,23 +67,23 @@ comps pos
 pProg :: Parser GoatProgram
 pProg 
   = do 
-      funcs <- many1 pFunc
+      funcs <- many1 pProc
       return (GoatProgram funcs)
 
 -------------------------------------------------------------------------------
--- pFunc parses functions and looks for the keyword 'proc' and parses 
+-- pProc parses functions and looks for the keyword 'proc' and parses 
 -- the function name, its arguments, and then the function body
 -------------------------------------------------------------------------------
 
-pFunc :: Parser Func
-pFunc
+pProc :: Parser Proc
+pProc
   = do  
       pos <- getPosition
       reserved "proc"
       name <- identifier <?> "function name"
       args <- parens (pArgs)
       (decls, stmts) <- pBody
-      return (Func (comps pos) name args decls stmts)
+      return (Proc (comps pos) name args decls stmts)
        
 
 -------------------------------------------------------------------------------
@@ -92,14 +92,14 @@ pFunc
 -- identifier.
 -------------------------------------------------------------------------------
 
-pArgs :: Parser [FuncArg]
+pArgs :: Parser [ProcArg]
 pArgs
   = do
       pos <- getPosition
       args <- sepBy pArg comma
       return args
       
-pArg :: Parser FuncArg
+pArg :: Parser ProcArg
 pArg 
   = do  
       pos <- getPosition

@@ -20,7 +20,7 @@ printIdent ident = putStr ident
 -------------------------------------------------------------------------------
 -- Print list of arguments. Only add ", " if there are more than one arguments
 -------------------------------------------------------------------------------
-printArgs :: [FuncArg] -> IO ()
+printArgs :: [ProcArg] -> IO ()
 printArgs [] = return ()
 printArgs [x] = printArg x
 printArgs (arg:funcArgs) =
@@ -33,7 +33,7 @@ printArgs (arg:funcArgs) =
 -------------------------------------------------------------------------------
 -- Print one argument
 -------------------------------------------------------------------------------
-printArg :: FuncArg -> IO ()
+printArg :: ProcArg -> IO ()
 printArg (Val _ baseType ident) =
   do
     putStr "val "
@@ -253,10 +253,10 @@ printUnop UMinus = putStr "-"
 
 
 -------------------------------------------------------------------------------
--- printFunc is a function used to print individual functions from the program
+-- printProc is a function used to print individual functions from the program
 -------------------------------------------------------------------------------
-printFunc :: Func -> IO ()
-printFunc (Func _ ident args decls stmts)
+printProc :: Proc -> IO ()
+printProc (Proc _ ident args decls stmts)
   = do
       putStr "proc "
       printIdent ident
@@ -276,10 +276,10 @@ printFunc (Func _ ident args decls stmts)
 prettyPrint :: GoatProgram -> IO ()
 prettyPrint (GoatProgram [])
   = return ()
-prettyPrint (GoatProgram [f]) = printFunc f
+prettyPrint (GoatProgram [f]) = printProc f
 prettyPrint (GoatProgram (f:funcs))
   = do
-      printFunc f
+      printProc f
       putStrLn ""
       prettyPrint (GoatProgram funcs)
 

@@ -16,7 +16,6 @@ data BaseType
   = BoolType | IntType | FloatType
   deriving (Show, Eq)
 
-
 -- TODO Change to Integer instead of Expr
 -- Variables
 data Var
@@ -69,17 +68,17 @@ data Stmt
   | While Pos Expr [Stmt]
   deriving (Show, Eq)
 
--- Function arguments
-data FuncArg
+-- Procedure arguments
+data ProcArg
   = Val Pos BaseType Ident
   | Ref Pos BaseType Ident
   deriving (Show, Eq)
 
--- Function
-data Func
-  = Func Pos Ident [FuncArg] [Decl] [Stmt]
+-- Procedure
+data Proc
+  = Proc Pos Ident [ProcArg] [Decl] [Stmt]
   deriving (Show, Eq)
 
 data GoatProgram
-  = GoatProgram [Func]
+  = GoatProgram [Proc]
   deriving (Show, Eq)
