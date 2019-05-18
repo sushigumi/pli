@@ -1,4 +1,4 @@
-Goat: Goat.hs GoatAST.hs PrettyGoat.hs
+Goat: Goat.hs GoatAST.hs PrettyGoat.hs GoatParser.hs
 	ghc Goat.hs
 
 clean:

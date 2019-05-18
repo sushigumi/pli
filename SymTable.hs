@@ -1,5 +1,0 @@
--- SymTable.hs
--- Authors: Wen Tze Joshua Leong (wleong3)
---          Yiyue Wang (yiyue)
--- Module which provides symbol table services to the compiler
--- for Goat

@@ -1,0 +1,5 @@
+proc main()
+    float a;
+begin
+    a := 41.08;
+end

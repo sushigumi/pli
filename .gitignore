@@ -7,3 +7,6 @@ Goat
 oz/
 try/
 todo.txt
+.*
+*.oz
+*.out
