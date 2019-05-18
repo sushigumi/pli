@@ -54,6 +54,11 @@ goatReserved
 goatOpnames
   = ["||", "&&", "!", "=", "!=", "<", "<=", ">", ">=", "+", "-", "*", "/"]
 
+-- Translate a source code position to a pair of integers (line, column)
+comps :: SourcePos -> (Int, Int)
+comps pos
+  = (sourceLine pos, sourceColumn pos)
+
 ------------------------------------------------------------------------------
 -- pProg is the topmost parsing function. It looks for all "proc" keywords and
 -- parses all of them in a loop only keeps a lookout for "main"
@@ -72,12 +77,14 @@ pProg
 
 pFunc :: Parser Func
 pFunc
-  = do { reserved "proc"
-       ; name <- identifier <?> "function name"
-       ; args <- parens (pArgs)
-       ; (decls, stmts) <- pBody
-       ; return (Func name args decls stmts)
-       }
+  = do  
+      pos <- getPosition
+      reserved "proc"
+      name <- identifier <?> "function name"
+      args <- parens (pArgs)
+      (decls, stmts) <- pBody
+      return (Func (comps pos) name args decls stmts)
+       
 
 -------------------------------------------------------------------------------
 -- pArgs parses the arguments of the functions. It wants to recognize whether
@@ -87,23 +94,28 @@ pFunc
 
 pArgs :: Parser [FuncArg]
 pArgs
-  = do 
+  = do
+      pos <- getPosition
       args <- sepBy pArg comma
       return args
       
 pArg :: Parser FuncArg
 pArg 
-  = do { reserved "val"
-       ; baseType <- pBaseType
-       ; ident <- identifier
-       ; return (Val baseType ident)
-       }
+  = do  
+      pos <- getPosition
+      reserved "val"
+      baseType <- pBaseType
+      ident <- identifier
+      return (Val (comps pos) baseType ident)
+       
     <|>
-    do { reserved "ref"
-       ; baseType <- pBaseType
-       ; ident <- identifier
-       ; return (Ref baseType ident)
-       } 
+    do  
+      pos <- getPosition
+      reserved "ref"
+      baseType <- pBaseType
+      ident <- identifier
+      return (Ref (comps pos) baseType ident)
+        
     <?>
     "function parameter starting with 'ref' or 'val'"
 
@@ -129,12 +141,13 @@ pBody
 pDecl :: Parser Decl
 pDecl
   = do
+      pos <- getPosition
       baseType <- pBaseType
       ident <- identifier
       whiteSpace
       var <- pVar ident 
       semi
-      return (Decl baseType var)
+      return (Decl (comps pos) baseType var)
 
 -------------------------------------------------------------------------------
 -- pStmt is the main parser for statements. It wants to recognise read, write
@@ -150,28 +163,32 @@ pStmt
 
 pRead 
   = do
+      pos <- getPosition
       reserved "read"
       lvalue <- pLvalue
       semi
-      return (Read lvalue)
+      return (Read (comps pos) lvalue)
 
 pWrite 
   = do
+      pos <- getPosition
       reserved "write"
       expr <- pExpr
       semi
-      return (Write expr)
+      return (Write (comps pos) expr)
 
 pCall 
   = do
+      pos <- getPosition
       reserved "call"
       ident <- identifier <?> "function identifier after call"
       exprLst <- parens (sepBy pExpr comma)
       semi
-      return (Call ident exprLst)
+      return (Call (comps pos) ident exprLst)
 
 pIf
   = do
+      pos <- getPosition
       reserved "if"
       exp <- pExpr
       reserved "then"
@@ -179,13 +196,14 @@ pIf
       elseside <- pElse
       reserved "fi"
       case elseside of
-        Right elseStmts -> return (IfElse exp ifStmts elseStmts)
-        Left _          -> return (If exp ifStmts)
+        Right elseStmts -> return (IfElse (comps pos) exp ifStmts elseStmts)
+        Left _          -> return (If (comps pos) exp ifStmts)
 
 -- Helper for If to pass the else portion if it exists
 pElse :: Parser (Either () [Stmt])
 pElse
   = do
+      pos <- getPosition
       reserved "else"
       stmts <- many1 pStmt <?> "at least 1 statement"
       return (Right stmts)
@@ -195,39 +213,45 @@ pElse
 
 pWhile 
   = do
+      pos <- getPosition
       reserved "while"
       exp <- pExpr
       reserved "do"
       stmts <- many1 pStmt <?> "at least 1 statment"
       reserved "od"
-      return (While exp stmts)
+      return (While (comps pos) exp stmts)
 
 pAsg
   = do
+      pos <- getPosition
       lvalue <- pLvalue
       whiteSpace
       reservedOp ":="
       whiteSpace
       rvalue <- pExpr
       semi
-      return (Assign lvalue rvalue)
+      return (Assign (comps pos) lvalue rvalue)
 
 -------------------------------------------------------------------------------
 -- pVar is the main parser for variables whether atomic or array variables
 -------------------------------------------------------------------------------
 pVar :: Ident -> Parser Var
 pVar ident
-  = do { char '['
-       ; first <- pExpr <?> "size or initializer for variable with array type"
-       ; arrayVal <- pSquare first
-       ; char ']' <?> "']' to close array"
-       ; whiteSpace
-       ; case arrayVal of
-           Left (first, sec) -> return (Array2d ident first sec)
-           Right first       -> return (Array1d ident first)
-       }
+  = do  
+      pos <- getPosition
+      char '['
+      first <- pExpr <?> "size or initializer for variable with array type"
+      arrayVal <- pSquare first
+      char ']' <?> "']' to close array"
+      whiteSpace
+      case arrayVal of
+        Left (first, sec) -> return (Array2d (comps pos) ident first sec)
+        Right first       -> return (Array1d (comps pos) ident first)
+       
     <|>
-    do { return (Elem ident) }
+    do
+      pos <- getPosition
+      return (Elem (comps pos) ident) 
     <?>
     "variable"
 
@@ -260,13 +284,22 @@ pExpr = buildExpressionParser table pTerm <?> "expression"
             , [binary "||" Or] 
             ]
     prefix name fun
-      = Prefix (do { reservedOp name; return (UnopExpr fun) })
+      = Prefix (do { pos <- getPosition; 
+                     reservedOp name; 
+                     return (UnopExpr (comps pos) fun) }
+               )
     
     binary name op
-      = Infix (do { reservedOp name; return (BinopExpr op) }) AssocLeft
+      = Infix (do { pos <- getPosition;
+                    reservedOp name; 
+                    return (BinopExpr (comps pos) op) }
+              ) AssocLeft
 
     relation name rel
-      = Infix (do { reservedOp name; return (BinopExpr rel) }) AssocNone
+      = Infix (do { pos <- getPosition; 
+                    reservedOp name; 
+                    return (BinopExpr (comps pos) rel) }
+              ) AssocNone
 
     pTerm
       = choice [pIdent, pString, parens pExpr, pConst]
@@ -281,11 +314,12 @@ pString, pConst, pBool, pNum, pIdent :: Parser Expr
 -- these characters in the string itself
 pString 
   = do
+      pos <- getPosition
       char '"'
       str <- many (noneOf "\n\t\"")
       char '"'
       whiteSpace
-      return (StrConst str)
+      return (StrConst (comps pos) str)
     <?>
     "constant"
 
@@ -295,23 +329,28 @@ pConst
 
 pBool
   = do
+      pos <- getPosition
       reserved "true"
-      return (BoolConst True)
+      return (BoolConst (comps pos) True)
     <|>
     do
+      pos <- getPosition
       reserved "false"
-      return (BoolConst False)
+      return (BoolConst (comps pos) False)
 
 -- Parses a natural number or floating number
 -- This parses the first digit as an integer and then the '.' and then the 
 -- integer again if it is a float
 pNum 
   = do
-      first <- natural
+      pos <- getPosition
+      first <- many1 digit
       afterDot <- pAfterDot
       case afterDot of
-        Right val -> return (FloatConst (read (show first ++ val) :: Float))
-        Left _    -> return (IntConst (fromInteger first :: Int))
+        Right val 
+          -> return (FloatConst (comps pos) (read (first ++ val) :: Float))
+        Left _    
+          -> return (IntConst (comps pos) (read first :: Int))
 
 -- Parses a natural number after the '.' if it is a float, else returns nothing
 pAfterDot :: Parser (Either () String)
@@ -323,35 +362,44 @@ pAfterDot
       return (Right ('.':val))
     <|>
     do
+      whiteSpace
       return (Left ()) 
    
 -- Parses an identifier
 pIdent 
   = do
+      pos <- getPosition
       ident <- identifier
       var <- pVar ident
-      return (Id var)
+      return (Id (comps pos) var)
       <?>
       "identifier"
       
 
 pBaseType :: Parser BaseType
 pBaseType
-  = do { reserved "bool"; return BoolType }
+  = do 
+      reserved "bool" 
+      return BoolType 
     <|>
-    do { reserved "int"; return IntType }
+    do  
+      reserved "int" 
+      return IntType 
     <|>
-    do { reserved "float"; return FloatType }
+    do  
+      reserved "float"
+      return FloatType 
     <?>
     "type declaration"
 
 pLvalue :: Parser Lvalue
 pLvalue
   = do
+      pos <- getPosition
       ident <- identifier
       whiteSpace
       var <- pVar ident
-      return (Lvalue var)
+      return (Lvalue (comps pos) var)
     <?>
     "lvalue"
 

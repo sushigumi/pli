@@ -8,26 +8,31 @@ module GoatAST where
 
 type Ident = String
 
+-- Position of the data type in the file (Column, Line number)
+type Pos = (Int, Int)
+
 -- Basetype
 data BaseType
   = BoolType | IntType | FloatType
   deriving (Show, Eq)
 
+
+-- TODO Change to Integer instead of Expr
 -- Variables
 data Var
-  = Elem Ident
-  | Array1d Ident Expr
-  | Array2d Ident Expr Expr
+  = Elem Pos Ident
+  | Array1d Pos Ident Expr
+  | Array2d Pos Ident Expr Expr
   deriving (Show, Eq)
 
 -- Left value of assignment statements
 data Lvalue
-  = Lvalue Var
+  = Lvalue Pos Var
   deriving (Show, Eq)
 
 -- Function declarations
 data Decl
-  = Decl BaseType Var 
+  = Decl Pos BaseType Var 
   deriving (Show, Eq)
 
 -- Unary operators
@@ -44,35 +49,35 @@ data Binop
 
 -- Expressions
 data Expr
-  = BoolConst Bool
-  | IntConst Int
-  | FloatConst Float
-  | StrConst String
-  | Id Var
-  | BinopExpr Binop Expr Expr
-  | UnopExpr Unop Expr
+  = BoolConst Pos Bool
+  | IntConst Pos Int
+  | FloatConst Pos Float
+  | StrConst Pos String
+  | Id Pos Var
+  | BinopExpr Pos Binop Expr Expr
+  | UnopExpr Pos Unop Expr
   deriving (Show, Eq)
 
 -- Statements
 data Stmt
-  = Assign Lvalue Expr
-  | Read Lvalue
-  | Write Expr
-  | Call Ident [Expr]
-  | If Expr [Stmt]
-  | IfElse Expr [Stmt] [Stmt]
-  | While Expr [Stmt]
+  = Assign Pos Lvalue Expr
+  | Read Pos Lvalue
+  | Write Pos Expr
+  | Call Pos Ident [Expr]
+  | If Pos Expr [Stmt]
+  | IfElse Pos Expr [Stmt] [Stmt]
+  | While Pos Expr [Stmt]
   deriving (Show, Eq)
 
 -- Function arguments
 data FuncArg
-  = Val BaseType Ident
-  | Ref BaseType Ident
+  = Val Pos BaseType Ident
+  | Ref Pos BaseType Ident
   deriving (Show, Eq)
 
 -- Function
 data Func
-  = Func Ident [FuncArg] [Decl] [Stmt]
+  = Func Pos Ident [FuncArg] [Decl] [Stmt]
   deriving (Show, Eq)
 
 data GoatProgram
