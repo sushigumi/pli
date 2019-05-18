@@ -226,7 +226,7 @@ pAsg
 pVar :: Ident -> Parser Var
 pVar ident
   = do { char '['
-       ; first <- natural <?> "size or initializer for variable with array type"
+       ; first <- pExpr <?> "size or initializer for variable with array type"
        ; arrayVal <- pSquare first
        ; char ']' <?> "']' to close array"
        ; whiteSpace
@@ -242,10 +242,10 @@ pVar ident
 -- Parses the second half of an array, which is after the comma.
 -- If there is no comma, then just return the first number, else returns
 -- both numbers
-pSquare :: Integer -> Parser (Either (Integer, Integer) Integer)
+pSquare :: Expr -> Parser (Either (Expr, Expr) Expr)
 pSquare first
   = do { comma 
-       ; second <- natural <?> "']', size or initializer for array variable"
+       ; second <- pExpr <?> "']', size or initializer for array variable"
        ; return (Left (first, second)) 
        }
     <|>
@@ -318,7 +318,7 @@ pNum
       first <- natural
       afterDot <- pAfterDot
       case afterDot of
-        Right val -> return (FloatConst (read (show first ++ "." ++ val) :: Float))
+        Right val -> return (FloatConst (read (show first ++ val) :: Float))
         Left _    -> return (IntConst (fromInteger first :: Int))
 
 -- Parses a natural number after the '.' if it is a float, else returns nothing
@@ -327,7 +327,8 @@ pAfterDot
   = do 
       dot
       val <- many1 digit <?> "number after '.'"
-      return (Right val)
+      whiteSpace
+      return (Right ('.':val))
     <|>
     do
       return (Left ()) 
@@ -366,6 +367,8 @@ pLvalue
 -- This is the starting point for the Goat parser and parses the whole Goat 
 -- program and returns either the AST of the program or 
 -- if -p is specified, pretty prints the Goat program
+-------------------------------------------------------------------------------
+pMain :: Parser GoatProgram
 pMain 
   = do
       whiteSpace
@@ -389,7 +392,6 @@ goat task file
       case output of
         Right ast -> case task of
                        Compile -> do
-                                    genCode ast
                                     exitWith ExitSuccess
                        Pretty  -> do
                                     prettyPrint ast
