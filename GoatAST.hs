@@ -68,3 +68,35 @@ data Func
 data GoatProgram
   = GoatProgram [Func]
   deriving (Show, Eq)
+
+
+-------------------------------------------------------------------------------
+-- Data structures for the annotated abstract syntax tree
+-------------------------------------------------------------------------------
+
+data Type
+  = Bool | Float | Int | String
+
+data Attr
+  = VarAttr { type :: Type
+            , env :: Symtable
+            }
+  | ExprAttr { type :: Type
+             , env :: Symtable
+             , op :: CodeOp
+             }
+  | StmtAttr { type :: Type
+             , env :: Symtable
+             , op :: CodeOp
+             }
+
+data Node
+  = StmtNode Stmt Attr
+  | ExprNode Expr Attr
+  | VarNode Var Attr
+
+data AnnFunc
+  = Func Ident [FuncArg] [Decl] [Node]
+
+data AnnGoatProgram
+  = AnnGoatProgram [AnnFunc]
