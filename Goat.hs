@@ -292,6 +292,7 @@ pString
       char '"'
       str <- many (noneOf "\n\t\"")
       char '"'
+      whiteSpace
       return (StrConst str)
     <?>
     "constant"
@@ -317,16 +318,16 @@ pNum
       first <- natural
       afterDot <- pAfterDot
       case afterDot of
-        Right val -> return (FloatConst (read (show first ++ "." ++ show val) :: Float))
+        Right val -> return (FloatConst (read (show first ++ "." ++ val) :: Float))
         Left _    -> return (IntConst (fromInteger first :: Int))
 
 -- Parses a natural number after the '.' if it is a float, else returns nothing
-pAfterDot :: Parser (Either () Int)
+pAfterDot :: Parser (Either () String)
 pAfterDot 
   = do 
       dot
-      val <- natural <?> "number after '.'"
-      return (Right (fromInteger val :: Int))
+      val <- many1 digit <?> "number after '.'"
+      return (Right val)
     <|>
     do
       return (Left ()) 
@@ -365,8 +366,6 @@ pLvalue
 -- This is the starting point for the Goat parser and parses the whole Goat 
 -- program and returns either the AST of the program or 
 -- if -p is specified, pretty prints the Goat program
--------------------------------------------------------------------------------
-pMain :: Parser GoatProgram
 pMain 
   = do
       whiteSpace
@@ -384,22 +383,23 @@ main
 
 goat :: Task -> String -> IO ()
 goat task file
-  | task == Compile = do
-                        putStrLn ("Sorry, cannot generate code yet")
-                        exitWith ExitSuccess
-  | task == Pretty = do
-                       input <- readFile file
-                       let output = runParser pMain 0 "" input
-                       case output of 
-                         Right ast -> do
-                                        prettyPrint ast
-                                        exitWith ExitSuccess
-                         Left  err -> do { putStr "Parser error at "
-                                         ; print err
-                                         ; exitWith (ExitFailure 1)
-                                         }
+  = do
+      input <- readFile file
+      let output = runParser pMain 0 "" input
+      case output of
+        Right ast -> case task of
+                       Compile -> do
+                                    genCode ast
+                                    exitWith ExitSuccess
+                       Pretty  -> do
+                                    prettyPrint ast
+                                    exitWith ExitSuccess
+        Left err  -> do 
+                       putStr "Parser error at "
+                       print err
+                       exitWith (ExitFailure 1)
 
--------------------------------------------------------------------------------
+---------------------------------------------------------------------------------
 -- Handling command line arguments
 -------------------------------------------------------------------------------
 data Task
