@@ -14,8 +14,11 @@
 module Main (main) where
 
 import GoatParser
+import Analyse
 import System.Environment
 import System.Exit
+
+import Data.Map.Internal.Debug
 
 -------------------------------------------------------------------------------
 -- This is the starting point for the Goat parser and parses the whole Goat 
@@ -38,6 +41,8 @@ goat task file
       case output of
         Right ast -> case task of
                        Compile -> do
+                                    let table = analyse ast
+                                    putStr $ showTree table
                                     exitWith ExitSuccess
                        Pretty  -> do
                                     print ast

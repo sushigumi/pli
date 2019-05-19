@@ -4,6 +4,8 @@
 -- This is the Parser for the programming language Goat.
 -- mkAST produces an Abstract Syntax Tree for the code and if it is not 
 -- syntactically well-formed, prints an error
+-- This file uses some code obtained from GoatParser.hs provided by 
+-- Harald Sondergaard in LMS for the COMP90045 subject
 
 module GoatParser (mkAST) where
 
@@ -201,7 +203,7 @@ pRead
       reserved "read"
       lvalue <- pLvalue
       semi
-      return (Read (comps pos) lvalue)
+      return (Read (comps pos) Nothing lvalue)
 
 pWrite 
   = do
@@ -209,7 +211,7 @@ pWrite
       reserved "write"
       expr <- pExpr
       semi
-      return (Write (comps pos) expr)
+      return (Write (comps pos) Nothing expr)
 
 pCall 
   = do
@@ -218,7 +220,7 @@ pCall
       ident <- identifier <?> "function identifier after call"
       exprLst <- parens (sepBy pExpr comma)
       semi
-      return (Call (comps pos) ident exprLst)
+      return (Call (comps pos) Nothing ident exprLst)
 
 pIf
   = do
@@ -230,8 +232,10 @@ pIf
       elseside <- pElse
       reserved "fi"
       case elseside of
-        Right elseStmts -> return (IfElse (comps pos) exp ifStmts elseStmts)
-        Left _          -> return (If (comps pos) exp ifStmts)
+        Right elseStmts 
+          -> return (IfElse (comps pos) Nothing exp ifStmts elseStmts)
+        Left _          
+          -> return (If (comps pos) Nothing exp ifStmts)
 
 -- Helper for If to pass the else portion if it exists
 pElse :: Parser (Either () [Stmt])
@@ -252,7 +256,7 @@ pWhile
       reserved "do"
       stmts <- many1 pStmt <?> "at least 1 statment"
       reserved "od"
-      return (While (comps pos) exp stmts)
+      return (While (comps pos) Nothing exp stmts)
 
 pAsg
   = do
@@ -263,13 +267,7 @@ pAsg
       whiteSpace
       rvalue <- pExpr
       semi
-      return (Assign (comps pos) lvalue rvalue)
-
--------------------------------------------------------------------------------
--- pVar is the main parser for variables whether atomic or array variables
--------------------------------------------------------------------------------
-
-
+      return (Assign (comps pos) Nothing lvalue rvalue)
 
 -------------------------------------------------------------------------------
 -- pExpr is the main parser for expressions. It takes into account the operator
@@ -290,25 +288,25 @@ pExpr = buildExpressionParser table pTerm <?> "expression"
     prefix name fun
       = Prefix (do { pos <- getPosition; 
                      reservedOp name; 
-                     return (fun (comps pos)) }
+                     return (fun (comps pos) Nothing) }
                )
     
     binary name op
       = Infix (do { pos <- getPosition;
                     reservedOp name; 
-                    return (BinopExpr (comps pos) op) }
+                    return (BinopExpr (comps pos) Nothing op) }
               ) AssocLeft
 
     relation name rel
       = Infix (do { pos <- getPosition; 
                     reservedOp name; 
-                    return (RelExpr (comps pos) rel) }
+                    return (RelExpr (comps pos) Nothing rel) }
               ) AssocNone
 
     binLogic name op
       = Infix (do { pos <- getPosition;
                     reservedOp name;
-                    return (op (comps pos)) }
+                    return (op (comps pos) Nothing) }
               ) AssocLeft
 
     pTerm
@@ -329,7 +327,7 @@ pString
       str <- many (noneOf "\n\t\"")
       char '"'
       whiteSpace
-      return (StrConst (comps pos) str)
+      return (StrConst (comps pos) Nothing str)
     <?>
     "constant"
 
@@ -341,12 +339,12 @@ pBool
   = do
       pos <- getPosition
       reserved "true"
-      return (BoolConst (comps pos) True)
+      return (BoolConst (comps pos) Nothing True)
     <|>
     do
       pos <- getPosition
       reserved "false"
-      return (BoolConst (comps pos) False)
+      return (BoolConst (comps pos) Nothing False)
 
 -- Parses a natural number or floating number
 -- This parses the first digit as an integer and then the '.' and then the 
@@ -358,9 +356,13 @@ pNum
       afterDot <- pAfterDot
       case afterDot of
         Right val 
-          -> return (FloatConst (comps pos) (read (first ++ val) :: Float))
+          -> do
+               let rep = read (first ++ val) :: Float
+               return (FloatConst (comps pos) Nothing rep)
         Left _    
-          -> return (IntConst (comps pos) (read first :: Int))
+          -> do
+               let rep = read first :: Int
+               return (IntConst (comps pos) Nothing rep)
 
 -- Parses a natural number after the '.' if it is a float, else returns nothing
 pAfterDot :: Parser (Either () String)
@@ -386,9 +388,9 @@ pIdent
       else
         do
           case exprs of
-            None -> return (Id (comps pos) ident)
-            One e -> return (ArrayRef (comps pos) ident e)
-            Two e1 e2 -> return (MatrixRef (comps pos) ident e1 e2)
+            None -> return (Id (comps pos) Nothing ident)
+            One e -> return (ArrayRef (comps pos) Nothing ident e)
+            Two e1 e2 -> return (MatrixRef (comps pos) Nothing ident e1 e2)
       <?>
       "identifier"
       
@@ -420,9 +422,9 @@ pLvalue
       else
         do
           case exprs of
-            None -> return (LId (comps pos) ident)
-            One e -> return (LArrayRef (comps pos) ident e)
-            Two e1 e2 -> return (LMatrixRef (comps pos) ident e1 e2)
+            None -> return (LId (comps pos) Nothing ident)
+            One e -> return (LArrayRef (comps pos) Nothing ident e)
+            Two e1 e2 -> return (LMatrixRef (comps pos) Nothing ident e1 e2)
     <?>
     "lvalue"
 
