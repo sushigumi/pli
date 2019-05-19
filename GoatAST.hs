@@ -3,6 +3,8 @@
 --          Yiyue Wang (yiyue)
 -- This file contains the data types which are used to create an Abstract
 -- Syntax Tree for a Goat program.
+-- Several modifications were made based on the GoatAST.hs provided by 
+-- Harald Sondergaard found on the LMS 
 
 module GoatAST where
 
@@ -13,37 +15,32 @@ type Pos = (Int, Int)
 
 -- Basetype
 data BaseType
-  = BoolType | IntType | FloatType
+  = BoolType | IntType | FloatType 
   deriving (Show, Eq)
 
--- TODO Change to Integer instead of Expr
--- Variables
-data Var
-  = Elem Pos Ident
-  | Array1d Pos Ident Expr
-  | Array2d Pos Ident Expr Expr
+data DeclType
+  = Base BaseType
+  | Array BaseType Int
+  | Matrix BaseType Int Int
   deriving (Show, Eq)
 
--- Left value of assignment statements
 data Lvalue
-  = Lvalue Pos Var
+  = LId Pos Ident
+  | LArrayRef Pos Ident Expr
+  | LMatrixRef Pos Ident Expr Expr
   deriving (Show, Eq)
 
--- Function declarations
+-- Procedure declarations
 data Decl
-  = Decl Pos BaseType Var 
+  = Decl Pos Ident DeclType
   deriving (Show, Eq)
 
--- Unary operators
-data Unop
-  = UNot | UMinus
-  deriving (Show, Eq)
-
--- Binary operators
 data Binop 
-  = Or | And 
-  | Equ | NotEqu | LThan | ELThan | GThan | EGThan
-  | Add | Sub | Mul | Div
+  = OpAdd | OpSub | OpMul | OpDiv
+  deriving (Show, Eq)
+
+data Relop 
+  = OpEq | OpNe | OpGe | OpLe |OpGt | OpLt
   deriving (Show, Eq)
 
 -- Expressions
@@ -52,9 +49,15 @@ data Expr
   | IntConst Pos Int
   | FloatConst Pos Float
   | StrConst Pos String
-  | Id Pos Var
+  | Id Pos Ident
+  | ArrayRef Pos Ident Expr
+  | MatrixRef Pos Ident Expr Expr
+  | And Pos Expr Expr
+  | Or Pos Expr Expr
+  | Not Pos Expr
+  | RelExpr Pos Relop Expr Expr
   | BinopExpr Pos Binop Expr Expr
-  | UnopExpr Pos Unop Expr
+  | UMinus Pos Expr
   deriving (Show, Eq)
 
 -- Statements
@@ -68,10 +71,13 @@ data Stmt
   | While Pos Expr [Stmt]
   deriving (Show, Eq)
 
+data ArgMode 
+  = Val | Ref
+  deriving (Show, Eq)
+
 -- Procedure arguments
 data ProcArg
-  = Val Pos BaseType Ident
-  | Ref Pos BaseType Ident
+  = ProcArg Pos ArgMode BaseType Ident
   deriving (Show, Eq)
 
 -- Procedure
@@ -82,3 +88,4 @@ data Proc
 data GoatProgram
   = GoatProgram [Proc]
   deriving (Show, Eq)
+

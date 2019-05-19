@@ -14,7 +14,6 @@
 module Main (main) where
 
 import GoatParser
-import PrettyGoat
 import System.Environment
 import System.Exit
 
@@ -41,7 +40,7 @@ goat task file
                        Compile -> do
                                     exitWith ExitSuccess
                        Pretty  -> do
-                                    prettyPrint ast
+                                    print ast
                                     exitWith ExitSuccess
         Left err  -> do 
                        putStr "Parser error at "
