@@ -16,6 +16,7 @@ module Main (main) where
 import GoatParser
 import Analyse
 import CodePrint
+import CodeGen
 import System.Environment
 import System.Exit
 
@@ -40,7 +41,8 @@ goat task file
       case output of
         Right ast -> case task of
                        Compile -> do
-                                    let code = analyse ast
+                                    let symTable = analyse ast
+                                        code = genCode ast symTable
                                     printCode code
                                     exitWith ExitSuccess
 -- CHANGEN PRETTY PRINT

@@ -8,8 +8,6 @@
 
 module GoatAST where
 
-import GoatIR
-
 type Ident = String
 
 -- Position of the data type in the file (Column, Line number)
@@ -104,6 +102,3 @@ data GoatProgram
 -------------------------------------------------------------------------------
 type Env = String
 
-data ProcCode
-  = ProcCode Ident [Instr]
-  deriving (Show, Eq)

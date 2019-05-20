@@ -1,7 +1,7 @@
 module CodePrint (printCode) where
 
-import GoatIR
 import GoatAST
+import GoatIR
 
 pLabel :: String -> IO ()
 pLabel label

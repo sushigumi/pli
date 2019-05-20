@@ -1,5 +1,7 @@
 module GoatIR where
 
+import GoatAST
+
 type Label = String
 
 data Reg
@@ -55,4 +57,9 @@ data Instr
   | DebugSlot Slot
   | DebugStack
   deriving (Show, Eq)
+
+data ProcCode
+  = ProcCode Ident [Instr]
+  deriving (Show, Eq)
+
 

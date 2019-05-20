@@ -5,11 +5,12 @@ import GoatAST
 import GoatIR
 
 -- Probably need to store the enclosing scope inside
-
+-- Maybe a Nothignt o represent whether it s a val or ref or nothing
 data VarInfo
   = VarInfo BaseType Slot
   deriving (Show, Eq)
 
+-- STORE ENCLOSING SCOPE INSIDE
 data ProcInfo
   = ProcInfo [ProcArg] ProcSymTable
   deriving (Show, Eq)
