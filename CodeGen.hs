@@ -9,8 +9,15 @@ import SymTable
 -- language for expressions
 -------------------------------------------------------------------------------
 genExpr :: Expr -> Reg -> Maybe Slot -> [Instr]
+genExpr (BoolConst _ val) r _ 
+  | val == True =  [IntConstI r 1]
+  | val == False = [IntConstI r 0]
+genExpr (IntConst _ val) r _ 
+  = [IntConstI r val]
+genExpr (FloatConst _ val) r _ 
+  = [RealConstI r val]
 genExpr (StrConst _ val) r _
-  = [StringConst r val]
+  = [StringConstI r val]
 
 
 
@@ -20,7 +27,11 @@ genStmt (Write _ expr)
   where
     callBuiltin 
       = case expr of
+          BoolConst _ _ -> [CallBuiltin PrintBool]
+          IntConst _ _ -> [CallBuiltin PrintInt]
+          FloatConst _ _ -> [CallBuiltin PrintReal]
           StrConst _ _ -> [CallBuiltin PrintString]
+          
 
 genProc :: Proc -> ProcCode
 genProc (Proc _ ident _ _ stmts)

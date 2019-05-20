@@ -17,7 +17,11 @@ builtinToStr PrintBool   = "print_bool"
 builtinToStr PrintString = "print_string"
 
 pInstr :: Instr -> IO ()
-pInstr (StringConst (Reg r) str)
+pInstr (IntConstI (Reg r) val)
+  = putStrLn $ "int_const r" ++ (show r) ++ ", " ++ (show val)
+pInstr (RealConstI (Reg r) val) 
+  = putStrLn $ "real_const r" ++ (show r) ++ ", " ++ (show val)
+pInstr (StringConstI (Reg r) str)
   = putStrLn $ "string_const r" ++ (show r) ++ ", \"" ++ str ++ "\""
 pInstr (Call label)
   = putStrLn $ "call " ++ label

@@ -39,9 +39,9 @@ data Instr
   | LoadAddr Reg Slot
   | LoadIndr Reg Reg
   | StoreIndr Reg Reg
-  | IntConst Reg Int
-  | RealConst Reg Float
-  | StringConst Reg String
+  | IntConstI Reg Int
+  | RealConstI Reg Float
+  | StringConstI Reg String
   | BinopInstr BinopI Reg Reg Reg
   | UnopInstr UnopI Reg Reg 
   | IntToReal Reg Reg
