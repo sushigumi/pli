@@ -4,6 +4,8 @@ import qualified Data.Map.Strict as Map
 import GoatAST
 import GoatIR
 
+-- Probably need to store the enclosing scope inside
+
 data VarInfo
   = VarInfo BaseType Slot
   deriving (Show, Eq)

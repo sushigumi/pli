@@ -7,7 +7,7 @@
 -- syntax tree based on data structures declared in GoatAST.hs
 -- This pretty printer prints to stdout
 
-module PrettyGoat where
+module PrettyGoat (prettyPrint) where
 import GoatAST
 
 -------------------------------------------------------------------------------

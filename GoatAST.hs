@@ -8,12 +8,7 @@
 
 module GoatAST where
 
--- Attributes for a node in the AST
-data Attr
-  = Attr { env :: String
-         , baseType :: BaseType
-         }
-  deriving (Show, Eq)
+import GoatIR
 
 type Ident = String
 
@@ -32,9 +27,9 @@ data DeclType
   deriving (Show, Eq)
 
 data Lvalue
-  = LId Pos (Maybe Attr) Ident
-  | LArrayRef Pos (Maybe Attr) Ident Expr
-  | LMatrixRef Pos (Maybe Attr) Ident Expr Expr
+  = LId Pos Ident
+  | LArrayRef Pos Ident Expr
+  | LMatrixRef Pos Ident Expr Expr
   deriving (Show, Eq)
 
 -- Procedure declarations
@@ -52,30 +47,30 @@ data Relop
 
 -- Expressions
 data Expr
-  = BoolConst Pos (Maybe Attr) Bool
-  | IntConst Pos (Maybe Attr) Int
-  | FloatConst Pos (Maybe Attr) Float
-  | StrConst Pos (Maybe Attr) String
-  | Id Pos (Maybe Attr) Ident
-  | ArrayRef Pos (Maybe Attr) Ident Expr
-  | MatrixRef Pos (Maybe Attr) Ident Expr Expr
-  | And Pos (Maybe Attr) Expr Expr
-  | Or Pos (Maybe Attr) Expr Expr
-  | Not Pos (Maybe Attr) Expr
-  | RelExpr Pos (Maybe Attr) Relop Expr Expr
-  | BinopExpr Pos (Maybe Attr) Binop Expr Expr
-  | UMinus Pos (Maybe Attr) Expr
+  = BoolConst Pos Bool
+  | IntConst Pos Int
+  | FloatConst Pos Float
+  | StrConst Pos String
+  | Id Pos Ident
+  | ArrayRef Pos Ident Expr
+  | MatrixRef Pos Ident Expr Expr
+  | And Pos Expr Expr
+  | Or Pos Expr Expr
+  | Not Pos Expr
+  | RelExpr Pos Relop Expr Expr
+  | BinopExpr Pos Binop Expr Expr
+  | UMinus Pos Expr
   deriving (Show, Eq)
 
 -- Statements
 data Stmt
-  = Assign Pos (Maybe Attr) Lvalue Expr 
-  | Read Pos (Maybe Attr) Lvalue 
-  | Write Pos (Maybe Attr) Expr 
-  | Call Pos (Maybe Attr) Ident [Expr] 
-  | If Pos (Maybe Attr) Expr [Stmt]
-  | IfElse Pos (Maybe Attr) Expr [Stmt] [Stmt]
-  | While Pos (Maybe Attr) Expr [Stmt]
+  = Assign Pos Lvalue Expr 
+  | Read Pos Lvalue 
+  | Write Pos Expr 
+  | ProcCall Pos Ident [Expr] 
+  | If Pos Expr [Stmt]
+  | IfElse Pos Expr [Stmt] [Stmt]
+  | While Pos Expr [Stmt]
   deriving (Show, Eq)
 
 data ArgMode 
@@ -96,3 +91,19 @@ data GoatProgram
   = GoatProgram [Proc]
   deriving (Show, Eq)
 
+
+-------------------------------------------------------------------------------
+-- Data structure for the annotated abstract syntax tree
+-- New data structures were used instead of the existing ones because it would
+-- be cumbersome to check for Maybe types since the attributes would only 
+-- be present during the Semantic Analysis phase.
+-- Having a new data structure which reflects the attributes instead of 
+-- updating the previous tree will also allow a reduction in space used
+-- since Haskell data structures are immutable and a copy is used for each
+-- update.
+-------------------------------------------------------------------------------
+type Env = String
+
+data ProcCode
+  = ProcCode Ident [Instr]
+  deriving (Show, Eq)

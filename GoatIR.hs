@@ -38,7 +38,7 @@ data Instr
   | LoadIndr Reg Reg
   | StoreIndr Reg Reg
   | IntConst Reg Int
-  | ReadConst Reg Float
+  | RealConst Reg Float
   | StringConst Reg String
   | BinopInstr BinopI Reg Reg Reg
   | UnopInstr UnopI Reg Reg 

@@ -203,7 +203,7 @@ pRead
       reserved "read"
       lvalue <- pLvalue
       semi
-      return (Read (comps pos) Nothing lvalue)
+      return (Read (comps pos) lvalue)
 
 pWrite 
   = do
@@ -211,7 +211,7 @@ pWrite
       reserved "write"
       expr <- pExpr
       semi
-      return (Write (comps pos) Nothing expr)
+      return (Write (comps pos) expr)
 
 pCall 
   = do
@@ -220,7 +220,7 @@ pCall
       ident <- identifier <?> "function identifier after call"
       exprLst <- parens (sepBy pExpr comma)
       semi
-      return (Call (comps pos) Nothing ident exprLst)
+      return (ProcCall (comps pos) ident exprLst)
 
 pIf
   = do
@@ -233,9 +233,9 @@ pIf
       reserved "fi"
       case elseside of
         Right elseStmts 
-          -> return (IfElse (comps pos) Nothing exp ifStmts elseStmts)
+          -> return (IfElse (comps pos)  exp ifStmts elseStmts)
         Left _          
-          -> return (If (comps pos) Nothing exp ifStmts)
+          -> return (If (comps pos) exp ifStmts)
 
 -- Helper for If to pass the else portion if it exists
 pElse :: Parser (Either () [Stmt])
@@ -256,7 +256,7 @@ pWhile
       reserved "do"
       stmts <- many1 pStmt <?> "at least 1 statment"
       reserved "od"
-      return (While (comps pos) Nothing exp stmts)
+      return (While (comps pos) exp stmts)
 
 pAsg
   = do
@@ -267,7 +267,7 @@ pAsg
       whiteSpace
       rvalue <- pExpr
       semi
-      return (Assign (comps pos) Nothing lvalue rvalue)
+      return (Assign (comps pos) lvalue rvalue)
 
 -------------------------------------------------------------------------------
 -- pExpr is the main parser for expressions. It takes into account the operator
@@ -288,25 +288,25 @@ pExpr = buildExpressionParser table pTerm <?> "expression"
     prefix name fun
       = Prefix (do { pos <- getPosition; 
                      reservedOp name; 
-                     return (fun (comps pos) Nothing) }
+                     return (fun (comps pos)) }
                )
     
     binary name op
       = Infix (do { pos <- getPosition;
                     reservedOp name; 
-                    return (BinopExpr (comps pos) Nothing op) }
+                    return (BinopExpr (comps pos) op) }
               ) AssocLeft
 
     relation name rel
       = Infix (do { pos <- getPosition; 
                     reservedOp name; 
-                    return (RelExpr (comps pos) Nothing rel) }
+                    return (RelExpr (comps pos) rel) }
               ) AssocNone
 
     binLogic name op
       = Infix (do { pos <- getPosition;
                     reservedOp name;
-                    return (op (comps pos) Nothing) }
+                    return (op (comps pos)) }
               ) AssocLeft
 
     pTerm
@@ -327,7 +327,7 @@ pString
       str <- many (noneOf "\n\t\"")
       char '"'
       whiteSpace
-      return (StrConst (comps pos) Nothing str)
+      return (StrConst (comps pos) str)
     <?>
     "constant"
 
@@ -339,12 +339,12 @@ pBool
   = do
       pos <- getPosition
       reserved "true"
-      return (BoolConst (comps pos) Nothing True)
+      return (BoolConst (comps pos) True)
     <|>
     do
       pos <- getPosition
       reserved "false"
-      return (BoolConst (comps pos) Nothing False)
+      return (BoolConst (comps pos) False)
 
 -- Parses a natural number or floating number
 -- This parses the first digit as an integer and then the '.' and then the 
@@ -358,11 +358,11 @@ pNum
         Right val 
           -> do
                let rep = read (first ++ val) :: Float
-               return (FloatConst (comps pos) Nothing rep)
+               return (FloatConst (comps pos) rep)
         Left _    
           -> do
                let rep = read first :: Int
-               return (IntConst (comps pos) Nothing rep)
+               return (IntConst (comps pos) rep)
 
 -- Parses a natural number after the '.' if it is a float, else returns nothing
 pAfterDot :: Parser (Either () String)
@@ -388,9 +388,9 @@ pIdent
       else
         do
           case exprs of
-            None -> return (Id (comps pos) Nothing ident)
-            One e -> return (ArrayRef (comps pos) Nothing ident e)
-            Two e1 e2 -> return (MatrixRef (comps pos) Nothing ident e1 e2)
+            None -> return (Id (comps pos) ident)
+            One e -> return (ArrayRef (comps pos) ident e)
+            Two e1 e2 -> return (MatrixRef (comps pos) ident e1 e2)
       <?>
       "identifier"
       
@@ -422,9 +422,9 @@ pLvalue
       else
         do
           case exprs of
-            None -> return (LId (comps pos) Nothing ident)
-            One e -> return (LArrayRef (comps pos) Nothing ident e)
-            Two e1 e2 -> return (LMatrixRef (comps pos) Nothing ident e1 e2)
+            None -> return (LId (comps pos) ident)
+            One e -> return (LArrayRef (comps pos) ident e)
+            Two e1 e2 -> return (LMatrixRef (comps pos) ident e1 e2)
     <?>
     "lvalue"
 
