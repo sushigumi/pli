@@ -6,11 +6,17 @@ type Label = String
 
 data Reg
   = Reg Int
-  deriving (Show, Eq)
+  deriving (Eq)
+
+instance Show Reg where
+  show (Reg r) = "r" ++ (show r)
 
 data Slot
   = Slot Int
-  deriving (Show, Eq)
+  deriving (Eq)
+  
+instance Show Slot where
+  show (Slot s) = show s
 
 data BinopI
   = AddInt | AddReal | AddOff
@@ -19,7 +25,7 @@ data BinopI
   | DivInt | DivReal
   | EqInt  | NeInt   | GtInt  | GeInt  | LtInt  | LeInt
   | EqReal | NeReal  | GtReal | GeReal | LtReal | LeReal
-  | And | Or
+  | AndI   | OrI
   deriving (Show, Eq)
 
 data UnopI

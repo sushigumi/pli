@@ -7,7 +7,7 @@ import GoatIR
 -- Probably need to store the enclosing scope inside
 -- Maybe a Nothignt o represent whether it s a val or ref or nothing
 data VarInfo
-  = VarInfo BaseType Slot
+  = VarInfo BaseType ArgMode Slot
   deriving (Show, Eq)
 
 -- STORE ENCLOSING SCOPE INSIDE
@@ -33,14 +33,14 @@ initGlobalTable procs
 
 -- Declarations, the counter for slot, procsymtable
 insertVar :: Decl -> Int -> ProcSymTable -> (Int, ProcSymTable)
-insertVar (Decl _ ident decltype) slot table
+insertVar (Decl _ ident decltype) s table
   = case decltype of
       Base baseType 
-        -> (slot+1, Map.insert ident (VarInfo baseType (Slot slot)) table)
+        -> (s+1, Map.insert ident (VarInfo baseType Val (Slot s)) table)
       Array baseType n 
-        -> (slot+n, Map.insert ident (VarInfo baseType (Slot slot)) table)
+        -> (s+n, Map.insert ident (VarInfo baseType Val (Slot s)) table)
       Matrix baseType m n 
-        -> (slot+m*n, Map.insert ident (VarInfo baseType (Slot slot)) table)
+        -> (s+m*n, Map.insert ident (VarInfo baseType Val (Slot s)) table)
 
 insertVars :: [Decl] -> Int -> ProcSymTable -> ProcSymTable
 insertVars [] _ table
@@ -49,6 +49,18 @@ insertVars (d:decls) slot table
   = insertVars decls newSlot newTable
   where 
     (newSlot, newTable) = insertVar d slot table
+
+insertArg :: ProcArg -> Int -> ProcSymTable -> (Int, ProcSymTable)
+insertArg (ProcArg _ mode baseType ident) s table
+  = (s+1, Map.insert ident (VarInfo baseType mode (Slot s)) table)
+
+insertArgs :: [ProcArg] -> Int -> ProcSymTable -> (Int, ProcSymTable)
+insertArgs [] slot table
+  = (slot, table)
+insertArgs (a:args) slot table
+  = insertArgs args newSlot newTable
+  where
+    (newSlot, newTable) = insertArg a slot table
 
 
 updateProcSymTable :: String -> [ProcArg] -> ProcSymTable -> GlobalSymTable
@@ -60,3 +72,12 @@ updateProcSymTable ident args procTable globalTable
 getProcInfo :: String -> GlobalSymTable -> Maybe ProcInfo
 getProcInfo ident globalTable
   = Map.lookup ident globalTable
+
+getVarInfo :: String -> ProcSymTable -> Maybe VarInfo
+getVarInfo ident procTable
+  = Map.lookup ident procTable
+
+
+getSize :: Map.Map k a -> Int
+getSize table
+  = Map.size table 

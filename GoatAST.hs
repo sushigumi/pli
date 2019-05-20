@@ -15,7 +15,7 @@ type Pos = (Int, Int)
 
 -- Basetype
 data BaseType
-  = BoolType | IntType | FloatType 
+  = BoolType | IntType | FloatType | StringType
   deriving (Show, Eq)
 
 data DeclType

@@ -51,10 +51,12 @@ initAnalyse ((Proc pos ident args decls stmts):procs) table
       = case getProcInfo ident table of
           Just (ProcInfo _ procTable) -> procTable
           Nothing -> Map.empty
+    
+    (newSlot, procSymTable1) = insertArgs args 0 procSymTable
 
-    newProcSymTable = insertVars decls 0 procSymTable
+    procSymTable2 = insertVars decls newSlot procSymTable
 
-    table1 = updateProcSymTable ident args newProcSymTable table
+    table1 = updateProcSymTable ident args procSymTable2 table
 
 analyse :: GoatProgram -> GlobalSymTable
 analyse (GoatProgram procs)
