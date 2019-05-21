@@ -156,6 +156,64 @@ genExpr (Not _ expr) r procTable Nothing Nothing
       let instrs = eInstrs ++ [UnopInstr NotI r r]
       return (BoolType, instrs)
 
+genExpr (RelExpr _ relop e1 e2) r procTable (Just tLabel) (Just fLabel)
+  = do
+      (e1Type, e1Instrs) <- genExpr e1 e1Place procTable Nothing Nothing
+      (e2Type, e2Instrs) <- genExpr e2 e2Place procTable Nothing Nothing
+
+      conv <- genIntToReal e1Place e2Place e1Type e2Type
+
+      let isFloat = e1Type == FloatType || e2Type == FloatType 
+          op = case relop of
+                 OpEq -> if isFloat then EqReal else EqInt
+                 OpNe -> if isFloat then NeReal else NeInt
+                 OpGe -> if isFloat then GeReal else GeInt
+                 OpLe -> if isFloat then LeReal else LeInt
+                 OpGt -> if isFloat then GtReal else GtInt
+                 OpLt -> if isFloat then LtReal else LtInt
+        
+          binopExpr = [BinopInstr op e1Place e1Place e2Place]
+
+      gotoE1True <- genBranchOnTrue tLabel e1Place
+      gotoE1False <- genUncond fLabel
+
+      let instrs = e1Instrs ++ e2Instrs ++ conv ++ binopExpr ++ gotoE1True ++ 
+                   gotoE1False
+
+      return (BoolType, instrs)
+
+  where
+    (Reg ePlace) = r
+    e1Place = Reg ePlace
+    e2Place = Reg (ePlace + 1)
+
+genExpr (RelExpr _ relop e1 e2) r procTable Nothing Nothing
+  = do
+      (e1Type, e1Instrs) <- genExpr e1 e1Place procTable Nothing Nothing
+      (e2Type, e2Instrs) <- genExpr e2 e2Place procTable Nothing Nothing
+
+      conv <- genIntToReal e1Place e2Place e1Type e2Type
+
+      let isFloat = e1Type == FloatType || e2Type == FloatType 
+          op = case relop of
+                 OpEq -> if isFloat then EqReal else EqInt
+                 OpNe -> if isFloat then NeReal else NeInt
+                 OpGe -> if isFloat then GeReal else GeInt
+                 OpLe -> if isFloat then LeReal else LeInt
+                 OpGt -> if isFloat then GtReal else GtInt
+                 OpLt -> if isFloat then LtReal else LtInt
+        
+          binopExpr = [BinopInstr op e1Place e1Place e2Place]
+
+          instrs = e1Instrs ++ e2Instrs ++ conv ++ binopExpr
+       
+      return (BoolType, instrs)     
+
+  where
+    (Reg ePlace) = r
+    e1Place = Reg ePlace
+    e2Place = Reg (ePlace + 1)
+
 
 genExpr (BinopExpr _ binop e1 e2) r procTable _ _
   = do
@@ -164,23 +222,12 @@ genExpr (BinopExpr _ binop e1 e2) r procTable _ _
         
       conv <- genIntToReal e1Place e2Place e1Type e2Type
                                
-      let op = case binop of 
-                 OpAdd -> if e1Type == FloatType || e2Type == FloatType then
-                            AddReal
-                          else 
-                            AddInt
-                 OpSub -> if e1Type == FloatType || e2Type == FloatType then
-                            SubReal
-                          else
-                            SubInt
-                 OpMul -> if e1Type == FloatType || e2Type == FloatType then
-                            MulReal
-                          else
-                            MulInt
-                 OpDiv -> if e1Type == FloatType || e2Type == FloatType then
-                            DivReal
-                          else
-                            DivInt
+      let isFloat = e1Type == FloatType || e2Type == FloatType
+          op = case binop of 
+                 OpAdd -> if isFloat then AddReal else AddInt
+                 OpSub -> if isFloat then SubReal else SubInt
+                 OpMul -> if isFloat then MulReal else MulInt
+                 OpDiv -> if isFloat then DivReal else DivInt
            
           binopInstr = [BinopInstr op e1Place e1Place e2Place]
 
@@ -196,6 +243,18 @@ genExpr (BinopExpr _ binop e1 e2) r procTable _ _
     (Reg ePlace) = r
     e1Place = Reg ePlace
     e2Place = Reg (ePlace + 1)
+
+genExpr (UMinus _ expr) r procTable _ _
+  = do 
+      (exprType, exprInstrs) <- genExpr expr r procTable Nothing Nothing
+      
+      let isFloat = exprType == FloatType
+          op = if isFloat then NegReal else NegInt
+       
+          instrs = exprInstrs ++ [UnopInstr op r r]
+    
+      return (exprType, instrs)
+    
 
 
 genStmt :: ProcSymTable -> Stmt -> Codegen [Instr]
@@ -213,6 +272,23 @@ genStmt table (Assign _ lvalue expr)
               (LId _ ident) -> ident
               (LArrayRef _ ident _) -> ident
               (LMatrixRef _ ident _ _) -> ident
+
+genStmt table (Read _ lvalue)
+  = do
+      let ident = case lvalue of
+            LId _ i -> i
+            LArrayRef _ i _ -> i
+            LMatrixRef _ i _ _ -> i
+          (VarInfo baseType _ s) = fromJust $ getVarInfo ident table
+      
+          readInstr = case baseType of
+                        IntType -> [CallBuiltin ReadInt]
+                        FloatType -> [CallBuiltin ReadReal]
+                        BoolType -> [CallBuiltin ReadBool]
+
+          storeInstr = [Store s (Reg 0)]
+
+      return $ readInstr ++ storeInstr
 
 genStmt table (Write _ expr)
   = do

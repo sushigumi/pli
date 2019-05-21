@@ -91,12 +91,35 @@ pInstr (BinopInstr binop r1 r2 r3)
     binopToStr AndI = "and"
     binopToStr OrI = "or"
 
-
+pInstr (UnopInstr unop r1 r2)
+  = do
+      pIndent
+      putStrLn $ (unopToStr unop) ++ " " ++ (show r1) ++ ", " ++ (show r2)
+  where
+    unopToStr :: UnopI -> String
+    unopToStr NegInt = "neg_int"
+    unopToStr NegReal = "neg_real"
+    unopToStr NotI = "not"
 
 pInstr (IntToReal r1 r2)
   = do
       pIndent
       putStrLn $ "int_to_real " ++ (show r1) ++ ", " ++ (show r2)
+
+pInstr (BranchOnTrue r label)
+  = do
+      pIndent
+      putStrLn $ "branch_on_true " ++ (show r) ++ ", " ++ label
+
+pInstr (BranchOnFalse r label)
+  = do
+      pIndent
+      putStrLn $ "branch_on_false " ++ (show r) ++ ", " ++ label
+
+pInstr (BranchUncond label)
+  = do
+      pIndent
+      putStrLn $ "branch_uncond " ++ label
 
 pInstr (Call label)
   = do
@@ -126,6 +149,21 @@ pInstr Halt
   = do
       pIndent
       putStrLn $ "halt"
+
+pInstr (DebugReg r) 
+  = do
+      pIndent
+      putStrLn $ "debug_reg " ++ (show r)
+
+pInstr (DebugSlot s) 
+  = do
+      pIndent
+      putStrLn $ "debug_slot " ++ (show s)
+
+pInstr DebugStack
+  = do
+      pIndent
+      putStrLn $ "debug_stack"
 
 pInstr (LabelI label)
   = putStrLn $ "label_" ++ label ++ ":"
