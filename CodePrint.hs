@@ -7,6 +7,10 @@ pLabel :: String -> IO ()
 pLabel label
   = putStrLn $ "label_" ++ label ++ ":"
 
+showLabel :: String -> String
+showLabel label
+  = "label_" ++ label
+
 pInstr :: Instr -> IO ()
 
 pInstr (PushSF size) 
@@ -109,17 +113,17 @@ pInstr (IntToReal r1 r2)
 pInstr (BranchOnTrue r label)
   = do
       pIndent
-      putStrLn $ "branch_on_true " ++ (show r) ++ ", " ++ label
+      putStrLn $ "branch_on_true " ++ (show r) ++ ", " ++ (showLabel label) 
 
 pInstr (BranchOnFalse r label)
   = do
       pIndent
-      putStrLn $ "branch_on_false " ++ (show r) ++ ", " ++ label
+      putStrLn $ "branch_on_false " ++ (show r) ++ ", " ++ (showLabel label)
 
 pInstr (BranchUncond label)
   = do
       pIndent
-      putStrLn $ "branch_uncond " ++ label
+      putStrLn $ "branch_uncond " ++ (showLabel label) 
 
 pInstr (Call label)
   = do

@@ -256,7 +256,6 @@ genExpr (UMinus _ expr) r procTable _ _
       return (exprType, instrs)
     
 
-
 genStmt :: ProcSymTable -> Stmt -> Codegen [Instr]
 
 genStmt table (Assign _ lvalue expr)
@@ -303,6 +302,83 @@ genStmt table (Write _ expr)
   where
     exprPlace = Reg 0
 
+
+genStmt table (If _ expr stmts)
+  = do
+      eTrueLabel <- getLabelCounter
+      incLabelCounter
+      sAfterLabel <- getLabelCounter
+      incLabelCounter
+      let ePlace = Reg 0
+          eTrue = show eTrueLabel
+          sAfter = show sAfterLabel
+
+      (eType, eInstrs) <- genExpr expr ePlace table (Just eTrue) (Just sAfter)
+
+      eTrueInstr <- genLabel eTrue
+      sInstrs <- mapM (genStmt table) stmts
+      sAfterInstr <- genLabel sAfter
+      
+      let instrs = eInstrs ++ eTrueInstr ++ (concat sInstrs) ++ sAfterInstr
+
+      return instrs
+      
+genStmt table (IfElse _ expr s1 s2)
+  = do
+      eFalseLabel <- getLabelCounter
+      incLabelCounter
+      eTrueLabel <- getLabelCounter
+      incLabelCounter
+      sAfterLabel <- getLabelCounter
+      incLabelCounter
+      
+      let ePlace = Reg 0
+          eFalse = show eFalseLabel
+          eTrue = show eTrueLabel
+          sAfter = show sAfterLabel
+    
+      (eType, eInstrs) <- genExpr expr ePlace table (Just eTrue) (Just eFalse)
+      eTrueInstr <- genLabel eTrue
+      s1Instrs <- mapM (genStmt table) s1
+      gotoSAfter <- genUncond sAfter
+      eFalseInstr <- genLabel eFalse
+      s2Instrs <- mapM (genStmt table) s2
+      sAfterInstr <- genLabel sAfter
+
+      let instrs = eInstrs ++ eTrueInstr ++ (concat s1Instrs) ++ gotoSAfter ++ 
+                   eFalseInstr ++ (concat s2Instrs) ++ sAfterInstr
+
+      return instrs
+
+
+genStmt table (While _ expr stmts) 
+  = do
+      sBeginLabel <- getLabelCounter
+      incLabelCounter
+      sBodyLabel <- getLabelCounter
+      incLabelCounter
+      sAfterLabel <- getLabelCounter
+      incLabelCounter
+      
+      let ePlace = Reg 0
+          sBegin = show sBeginLabel
+          sBody = show sBodyLabel
+          sAfter = show sAfterLabel
+          eTrue = sBody
+          eFalse = sAfter
+      
+      sBeginInstr <- genLabel sBegin   
+      (eType, eInstrs) <- genExpr expr ePlace table (Just eTrue) (Just eFalse)
+      sBodyInstr <- genLabel sBody
+      sInstrs <- mapM (genStmt table) stmts
+      gotoSBegin <- genUncond sBegin
+      sAfterInstr <- genLabel sAfter
+
+      let instrs = sBeginInstr ++ eInstrs ++ sBodyInstr ++ (concat sInstrs) ++
+                   gotoSBegin ++ sAfterInstr
+
+      return instrs
+      
 
 genProc :: GlobalSymTable -> Proc -> Codegen ProcCode
 genProc table (Proc _ ident _ _ stmts)
