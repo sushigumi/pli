@@ -30,7 +30,7 @@ data BinopI
 
 data UnopI
   = NegInt | NegReal 
-  | Not
+  | NotI
   deriving (Show, Eq)
 
 data Builtin
@@ -62,6 +62,7 @@ data Instr
   | DebugReg Reg
   | DebugSlot Slot
   | DebugStack
+  | LabelI Label
   deriving (Show, Eq)
 
 data ProcCode

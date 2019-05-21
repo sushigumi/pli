@@ -10,38 +10,60 @@ pLabel label
 pInstr :: Instr -> IO ()
 
 pInstr (PushSF size) 
-  = putStrLn $ "push_stack_frame " ++ (show size)
+  = do
+      pIndent
+      putStrLn $ "push_stack_frame " ++ (show size)
 
 pInstr (PopSF size)
-  = putStrLn $ "pop_stack_frame " ++ (show size)
+  = do
+      pIndent
+      putStrLn $ "pop_stack_frame " ++ (show size)
 
 pInstr (Store s r) 
-  = putStrLn $ "store " ++ (show s) ++ ", " ++ (show r)
+  = do
+      pIndent
+      putStrLn $ "store " ++ (show s) ++ ", " ++ (show r)
 
 pInstr (Load r s)
-  = putStrLn $ "load " ++ (show r) ++ ", " ++ (show s)
+  = do
+      pIndent
+      putStrLn $ "load " ++ (show r) ++ ", " ++ (show s)
 
 pInstr (LoadAddr r s)
-  = putStrLn $ "load_address " ++ (show r) ++ ", " ++ (show s)
+  = do
+      pIndent
+      putStrLn $ "load_address " ++ (show r) ++ ", " ++ (show s)
 
 pInstr (LoadIndr r1 r2)
-  = putStrLn $ "load_indirect " ++ (show r1) ++ ", " ++ (show r2)
+  = do
+      pIndent
+      putStrLn $ "load_indirect " ++ (show r1) ++ ", " ++ (show r2)
 
 pInstr (StoreIndr r1 r2)
-  = putStrLn $ "store_indirect " ++ (show r1) ++ ", " ++ (show r2)
+  = do
+      pIndent
+      putStrLn $ "store_indirect " ++ (show r1) ++ ", " ++ (show r2)
 
 pInstr (IntConstI r val)
-  = putStrLn $ "int_const " ++ (show r) ++ ", " ++ (show val)
+  = do
+      pIndent
+      putStrLn $ "int_const " ++ (show r) ++ ", " ++ (show val)
 
 pInstr (RealConstI r val) 
-  = putStrLn $ "real_const " ++ (show r) ++ ", " ++ (show val)
+  = do 
+      pIndent
+      putStrLn $ "real_const " ++ (show r) ++ ", " ++ (show val)
 
 pInstr (StringConstI r str)
-  = putStrLn $ "string_const " ++ (show r) ++ ", \"" ++ str ++ "\""
+  = do 
+      pIndent
+      putStrLn $ "string_const " ++ (show r) ++ ", \"" ++ str ++ "\""
 
 pInstr (BinopInstr binop r1 r2 r3)
-  = putStrLn $ (binopToStr binop) ++ " " ++ (show r1) ++ ", " ++
-               (show r2) ++ ", " ++ (show r3)
+  = do 
+      pIndent
+      putStrLn $ (binopToStr binop) ++ " " ++ (show r1) ++ ", " ++
+                 (show r2) ++ ", " ++ (show r3)
   where
     binopToStr :: BinopI -> String
     binopToStr AddInt = "add_int"
@@ -69,11 +91,22 @@ pInstr (BinopInstr binop r1 r2 r3)
     binopToStr AndI = "and"
     binopToStr OrI = "or"
 
+
+
+pInstr (IntToReal r1 r2)
+  = do
+      pIndent
+      putStrLn $ "int_to_real " ++ (show r1) ++ ", " ++ (show r2)
+
 pInstr (Call label)
-  = putStrLn $ "call " ++ label
+  = do
+      pIndent
+      putStrLn $ "call " ++ label
 
 pInstr (CallBuiltin builtin) 
-  = putStrLn $ "call_builtin " ++ (builtinToStr builtin)
+  = do 
+      pIndent
+      putStrLn $ "call_builtin " ++ (builtinToStr builtin)
   where
     builtinToStr :: Builtin -> String
     builtinToStr ReadInt     = "read_int"
@@ -85,26 +118,34 @@ pInstr (CallBuiltin builtin)
     builtinToStr PrintString = "print_string"
 
 pInstr Return
-  = putStrLn $ "return"
+  = do 
+      pIndent
+      putStrLn $ "return"
 
 pInstr Halt
-  = putStrLn $ "halt"
+  = do
+      pIndent
+      putStrLn $ "halt"
 
-pInstrIndent :: Instr -> IO ()
-pInstrIndent instr
+pInstr (LabelI label)
+  = putStrLn $ "label_" ++ label ++ ":"
+
+pIndent :: IO ()
+pIndent
   = do
       putStr "    "
-      pInstr instr
 
 pProc :: ProcCode -> IO ()
 pProc (ProcCode ident instrs)
   = do
       pLabel ident
-      mapM_ pInstrIndent instrs
+      mapM_ pInstr instrs
 
 printCode :: [ProcCode] -> IO ()
 printCode procs
   = do
-      pInstrIndent (Call "label_main")
-      pInstrIndent Halt
+      pIndent
+      pInstr (Call "label_main")
+      pIndent
+      pInstr Halt
       mapM_ pProc procs

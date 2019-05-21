@@ -42,7 +42,7 @@ goat task file
         Right ast -> case task of
                        Compile -> do
                                     let symTable = analyse ast
-                                    code <- genCode ast symTable
+                                        code = genCode ast symTable
                                     printCode code
                                     exitWith ExitSuccess
 -- CHANGEN PRETTY PRINT
