@@ -256,12 +256,12 @@ genExpr (UMinus _ expr) r procTable _ _
       return (exprType, instrs)
     
 
-genStmt :: ProcSymTable -> Stmt -> Codegen [Instr]
+genStmt :: (GlobalSymTable, ProcSymTable) -> Stmt -> Codegen [Instr]
 
-genStmt table (Assign _ lvalue expr)
+genStmt (table, pTable) (Assign _ lvalue expr)
   = do 
-      let (VarInfo baseType _ slot) = fromJust $ getVarInfo ident table
-      (exprType, exprInstrs) <- genExpr expr exprPlace table Nothing Nothing
+      let (VarInfo baseType _ slot) = fromJust $ getVarInfo ident pTable
+      (exprType, exprInstrs) <- genExpr expr exprPlace pTable Nothing Nothing
       return $ exprInstrs ++ [Store slot exprPlace]
 
   where
@@ -272,13 +272,13 @@ genStmt table (Assign _ lvalue expr)
               (LArrayRef _ ident _) -> ident
               (LMatrixRef _ ident _ _) -> ident
 
-genStmt table (Read _ lvalue)
+genStmt (table, pTable) (Read _ lvalue)
   = do
       let ident = case lvalue of
             LId _ i -> i
             LArrayRef _ i _ -> i
             LMatrixRef _ i _ _ -> i
-          (VarInfo baseType _ s) = fromJust $ getVarInfo ident table
+          (VarInfo baseType _ s) = fromJust $ getVarInfo ident pTable
       
           readInstr = case baseType of
                         IntType -> [CallBuiltin ReadInt]
@@ -289,9 +289,9 @@ genStmt table (Read _ lvalue)
 
       return $ readInstr ++ storeInstr
 
-genStmt table (Write _ expr)
+genStmt (table, pTable) (Write _ expr)
   = do
-      (baseType, exprInstrs) <- genExpr expr exprPlace table Nothing Nothing
+      (baseType, exprInstrs) <- genExpr expr exprPlace pTable Nothing Nothing
       let builtin = case baseType of
                       BoolType -> PrintBool
                       IntType -> PrintInt
@@ -303,7 +303,7 @@ genStmt table (Write _ expr)
     exprPlace = Reg 0
 
 
-genStmt table (If _ expr stmts)
+genStmt (table, pTable) (If _ expr stmts)
   = do
       eTrueLabel <- getLabelCounter
       incLabelCounter
@@ -313,17 +313,17 @@ genStmt table (If _ expr stmts)
           eTrue = show eTrueLabel
           sAfter = show sAfterLabel
 
-      (eType, eInstrs) <- genExpr expr ePlace table (Just eTrue) (Just sAfter)
+      (eType, eInstrs) <- genExpr expr ePlace pTable (Just eTrue) (Just sAfter)
 
       eTrueInstr <- genLabel eTrue
-      sInstrs <- mapM (genStmt table) stmts
+      sInstrs <- mapM (genStmt (table, pTable)) stmts
       sAfterInstr <- genLabel sAfter
       
       let instrs = eInstrs ++ eTrueInstr ++ (concat sInstrs) ++ sAfterInstr
 
       return instrs
       
-genStmt table (IfElse _ expr s1 s2)
+genStmt (table, pTable) (IfElse _ expr s1 s2)
   = do
       eFalseLabel <- getLabelCounter
       incLabelCounter
@@ -337,12 +337,12 @@ genStmt table (IfElse _ expr s1 s2)
           eTrue = show eTrueLabel
           sAfter = show sAfterLabel
     
-      (eType, eInstrs) <- genExpr expr ePlace table (Just eTrue) (Just eFalse)
+      (eType, eInstrs) <- genExpr expr ePlace pTable (Just eTrue) (Just eFalse)
       eTrueInstr <- genLabel eTrue
-      s1Instrs <- mapM (genStmt table) s1
+      s1Instrs <- mapM (genStmt (table, pTable)) s1
       gotoSAfter <- genUncond sAfter
       eFalseInstr <- genLabel eFalse
-      s2Instrs <- mapM (genStmt table) s2
+      s2Instrs <- mapM (genStmt (table, pTable)) s2
       sAfterInstr <- genLabel sAfter
 
       let instrs = eInstrs ++ eTrueInstr ++ (concat s1Instrs) ++ gotoSAfter ++ 
@@ -351,7 +351,7 @@ genStmt table (IfElse _ expr s1 s2)
       return instrs
 
 
-genStmt table (While _ expr stmts) 
+genStmt (table, pTable) (While _ expr stmts) 
   = do
       sBeginLabel <- getLabelCounter
       incLabelCounter
@@ -368,9 +368,9 @@ genStmt table (While _ expr stmts)
           eFalse = sAfter
       
       sBeginInstr <- genLabel sBegin   
-      (eType, eInstrs) <- genExpr expr ePlace table (Just eTrue) (Just eFalse)
+      (eType, eInstrs) <- genExpr expr ePlace pTable (Just eTrue) (Just eFalse)
       sBodyInstr <- genLabel sBody
-      sInstrs <- mapM (genStmt table) stmts
+      sInstrs <- mapM (genStmt (table, pTable)) stmts
       gotoSBegin <- genUncond sBegin
       sAfterInstr <- genLabel sAfter
 
@@ -387,7 +387,7 @@ genProc table (Proc _ ident _ _ stmts)
           stackFrameSize = getSize procTable
           epilogue = [PushSF stackFrameSize]
           prologue = [PopSF stackFrameSize, Return]
-      stmtInstrs <- mapM (genStmt procTable) stmts
+      stmtInstrs <- mapM (genStmt (table, procTable)) stmts
       return $ ProcCode ident (epilogue ++ (concat stmtInstrs) ++ prologue)
 
 genProcs :: GlobalSymTable -> [Proc] -> Codegen [ProcCode]
