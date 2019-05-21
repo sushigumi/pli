@@ -180,14 +180,11 @@ pIndent
 pProc :: ProcCode -> IO ()
 pProc (ProcCode ident instrs)
   = do
-      pLabel ident
       mapM_ pInstr instrs
 
 printCode :: [ProcCode] -> IO ()
 printCode procs
   = do
-      pIndent
       pInstr (Call "label_main")
-      pIndent
       pInstr Halt
       mapM_ pProc procs

@@ -49,28 +49,28 @@ genIntToReal r1 r2 b1 b2
   | otherwise = return []
 
 
-genExpr :: Expr -> Reg -> ProcSymTable -> Maybe Label -> Maybe Label 
+genExpr :: Reg -> ProcSymTable -> Maybe Label -> Maybe Label -> Expr
            -> Codegen (BaseType, [Instr])
-genExpr (BoolConst _ val) r _ _ _
+genExpr r _ _ _ (BoolConst _ val)
   | val == True =  return (BoolType, [IntConstI r 1])
   | val == False = return (BoolType, [IntConstI r 0])
 
-genExpr (IntConst _ val) r _ _ _
+genExpr r _ _ _ (IntConst _ val)
   = return (IntType, [IntConstI r val])
 
-genExpr (FloatConst _ val) r _ _ _
+genExpr r _ _ _ (FloatConst _ val)
   = return (FloatType, [RealConstI r val])
 
-genExpr (StrConst _ val) r _ _ _
+genExpr r _ _ _ (StrConst _ val)
   = return (StringType, [StringConstI r val])
 
-genExpr (Id pos ident) r procTable _ _
+genExpr r procTable _ _ (Id pos ident)
   = do
       let (VarInfo baseType _ s) = fromJust $ getVarInfo ident procTable 
       return (baseType, [Load r s])
 
 -- Maybe handle nothing here so that nothing means there is no cond
-genExpr (And _ e1 e2) r procTable (Just tLabel) (Just fLabel)
+genExpr r procTable (Just tLabel) (Just fLabel) (And _ e1 e2)
   = do
       e1TrueLabel <- getLabelCounter
       incLabelCounter
@@ -80,11 +80,11 @@ genExpr (And _ e1 e2) r procTable (Just tLabel) (Just fLabel)
           e1True = show e1TrueLabel
       let e2False = fLabel
           e2True = tLabel
-      (e1Type, e1Instrs) <- genExpr e1 r procTable (Just e1True) (Just e1False)
+      (e1Type, e1Instrs) <- genExpr r procTable (Just e1True) (Just e1False) e1 
       gotoE1True <- genBranchOnTrue e1True r
       gotoE1False <- genUncond e1False
       e1TrueInstrs <- genLabel e1True
-      (e2Type, e2Instrs) <- genExpr e2 r procTable (Just e2True) (Just e2False)
+      (e2Type, e2Instrs) <- genExpr r procTable (Just e2True) (Just e2False) e2
       gotoE2True <- genBranchOnTrue e2True r
       gotoE2False <- genUncond e2False
       
@@ -94,10 +94,10 @@ genExpr (And _ e1 e2) r procTable (Just tLabel) (Just fLabel)
       return (BoolType, instrs)
 
 
-genExpr (And _ e1 e2) r procTable Nothing Nothing
+genExpr r procTable Nothing Nothing (And _ e1 e2)
   = do
-      (e1Type, e1Instrs) <- genExpr e1 e1Place procTable Nothing Nothing
-      (e2Type, e2Instrs) <- genExpr e2 e2Place procTable Nothing Nothing
+      (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing e1
+      (e2Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing e2
       let instrs = e1Instrs ++ e2Instrs ++ [BinopInstr AndI r e1Place e2Place]
       return $ (BoolType, instrs)
   where
@@ -106,7 +106,7 @@ genExpr (And _ e1 e2) r procTable Nothing Nothing
     e2Place = Reg (ePlace + 1)
 
 
-genExpr (Or _ e1 e2) r procTable (Just tLabel) (Just fLabel)
+genExpr r procTable (Just tLabel) (Just fLabel) (Or _ e1 e2)
   = do
       e1FalseLabel <- getLabelCounter
       incLabelCounter
@@ -116,11 +116,11 @@ genExpr (Or _ e1 e2) r procTable (Just tLabel) (Just fLabel)
           e1True = tLabel
           e2False = fLabel
           e2True = tLabel
-      (e1Type, e1Instrs) <- genExpr e1 r procTable (Just e1True) (Just e1False)
+      (e1Type, e1Instrs) <- genExpr r procTable (Just e1True) (Just e1False) e1
       gotoE1True <- genBranchOnTrue e1True e1Place
       gotoE1False <- genUncond e1False 
       e1FalseInstrs <- genLabel e1False
-      (e2Type, e2Instrs) <- genExpr e2 r procTable (Just e2True) (Just e2False)
+      (e2Type, e2Instrs) <- genExpr r procTable (Just e2True) (Just e2False) e2
       gotoE2True <- genBranchOnTrue e2True e2Place
       gotoE2False <- genUncond e2False
     
@@ -130,10 +130,10 @@ genExpr (Or _ e1 e2) r procTable (Just tLabel) (Just fLabel)
       return (BoolType, instrs)
      
       
-genExpr (Or _ e1 e2) r procTable Nothing Nothing
+genExpr r procTable Nothing Nothing (Or _ e1 e2)
   = do
-      (e1Type, e1Instrs) <- genExpr e1 e1Place procTable Nothing Nothing
-      (e1Type, e2Instrs) <- genExpr e2 e2Place procTable Nothing Nothing
+      (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing e1
+      (e1Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing e2
       let instrs = e1Instrs ++ e2Instrs ++ [BinopInstr OrI r e1Place e2Place]
       return (BoolType, instrs)
       
@@ -143,23 +143,23 @@ genExpr (Or _ e1 e2) r procTable Nothing Nothing
     e2Place = Reg (ePlace + 1)
     
       
-genExpr (Not _ expr) r procTable (Just tLabel) (Just fLabel)
+genExpr r procTable (Just tLabel) (Just fLabel) (Not _ expr)
  = do
      let eFalse = tLabel
          eTrue = fLabel
-     (eType, eInstrs) <- genExpr expr r procTable (Just eTrue) (Just eFalse)
+     (eType, eInstrs) <- genExpr r procTable (Just eTrue) (Just eFalse) expr
      return (BoolType, eInstrs)
 
-genExpr (Not _ expr) r procTable Nothing Nothing
+genExpr r procTable Nothing Nothing (Not _ expr)
   = do
-      (eType, eInstrs) <- genExpr expr r procTable Nothing Nothing
+      (eType, eInstrs) <- genExpr r procTable Nothing Nothing expr
       let instrs = eInstrs ++ [UnopInstr NotI r r]
       return (BoolType, instrs)
 
-genExpr (RelExpr _ relop e1 e2) r procTable (Just tLabel) (Just fLabel)
+genExpr r procTable (Just tLabel) (Just fLabel) (RelExpr _ relop e1 e2)
   = do
-      (e1Type, e1Instrs) <- genExpr e1 e1Place procTable Nothing Nothing
-      (e2Type, e2Instrs) <- genExpr e2 e2Place procTable Nothing Nothing
+      (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing e1
+      (e2Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing e2
 
       conv <- genIntToReal e1Place e2Place e1Type e2Type
 
@@ -187,10 +187,10 @@ genExpr (RelExpr _ relop e1 e2) r procTable (Just tLabel) (Just fLabel)
     e1Place = Reg ePlace
     e2Place = Reg (ePlace + 1)
 
-genExpr (RelExpr _ relop e1 e2) r procTable Nothing Nothing
+genExpr r procTable Nothing Nothing (RelExpr _ relop e1 e2)
   = do
-      (e1Type, e1Instrs) <- genExpr e1 e1Place procTable Nothing Nothing
-      (e2Type, e2Instrs) <- genExpr e2 e2Place procTable Nothing Nothing
+      (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing e1
+      (e2Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing e2
 
       conv <- genIntToReal e1Place e2Place e1Type e2Type
 
@@ -215,10 +215,10 @@ genExpr (RelExpr _ relop e1 e2) r procTable Nothing Nothing
     e2Place = Reg (ePlace + 1)
 
 
-genExpr (BinopExpr _ binop e1 e2) r procTable _ _
+genExpr r procTable _ _ (BinopExpr _ binop e1 e2)
   = do
-      (e1Type, e1Instrs) <- genExpr e1 e1Place procTable Nothing Nothing
-      (e2Type, e2Instrs) <- genExpr e2 e2Place procTable Nothing Nothing
+      (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing e1
+      (e2Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing e2
         
       conv <- genIntToReal e1Place e2Place e1Type e2Type
                                
@@ -244,9 +244,9 @@ genExpr (BinopExpr _ binop e1 e2) r procTable _ _
     e1Place = Reg ePlace
     e2Place = Reg (ePlace + 1)
 
-genExpr (UMinus _ expr) r procTable _ _
+genExpr r procTable _ _ (UMinus _ expr)
   = do 
-      (exprType, exprInstrs) <- genExpr expr r procTable Nothing Nothing
+      (exprType, exprInstrs) <- genExpr r procTable Nothing Nothing expr
       
       let isFloat = exprType == FloatType
           op = if isFloat then NegReal else NegInt
@@ -261,7 +261,7 @@ genStmt :: (GlobalSymTable, ProcSymTable) -> Stmt -> Codegen [Instr]
 genStmt (table, pTable) (Assign _ lvalue expr)
   = do 
       let (VarInfo baseType _ slot) = fromJust $ getVarInfo ident pTable
-      (exprType, exprInstrs) <- genExpr expr exprPlace pTable Nothing Nothing
+      (exprType, exprInstrs) <- genExpr exprPlace pTable Nothing Nothing expr
       return $ exprInstrs ++ [Store slot exprPlace]
 
   where
@@ -291,7 +291,7 @@ genStmt (table, pTable) (Read _ lvalue)
 
 genStmt (table, pTable) (Write _ expr)
   = do
-      (baseType, exprInstrs) <- genExpr expr exprPlace pTable Nothing Nothing
+      (baseType, exprInstrs) <- genExpr exprPlace pTable Nothing Nothing expr
       let builtin = case baseType of
                       BoolType -> PrintBool
                       IntType -> PrintInt
@@ -302,6 +302,24 @@ genStmt (table, pTable) (Write _ expr)
   where
     exprPlace = Reg 0
 
+genStmt (table, pTable) (ProcCall _ ident exprs)
+  = do
+      let (ProcInfo args _) = fromJust $ getProcInfo ident table
+      eInstrs <- genExprs exprs 0 []
+      let callInstr = [Call procLabel] 
+      return $ eInstrs ++ callInstr
+
+  where
+    genExprs :: [Expr] -> Int -> [Instr] -> Codegen [Instr]
+    genExprs [] _ instrs
+      = return instrs
+    genExprs (e:exprs) i instrs
+      = do
+          (eType, eInstrs) <- genExpr (Reg i) pTable Nothing Nothing e
+          let instrs1 = instrs ++ eInstrs
+          genExprs exprs (i+1) instrs1 
+
+    procLabel = "label_" ++ ident
 
 genStmt (table, pTable) (If _ expr stmts)
   = do
@@ -313,7 +331,7 @@ genStmt (table, pTable) (If _ expr stmts)
           eTrue = show eTrueLabel
           sAfter = show sAfterLabel
 
-      (eType, eInstrs) <- genExpr expr ePlace pTable (Just eTrue) (Just sAfter)
+      (eType, eInstrs) <- genExpr ePlace pTable (Just eTrue) (Just sAfter) expr
 
       eTrueInstr <- genLabel eTrue
       sInstrs <- mapM (genStmt (table, pTable)) stmts
@@ -337,7 +355,7 @@ genStmt (table, pTable) (IfElse _ expr s1 s2)
           eTrue = show eTrueLabel
           sAfter = show sAfterLabel
     
-      (eType, eInstrs) <- genExpr expr ePlace pTable (Just eTrue) (Just eFalse)
+      (eType, eInstrs) <- genExpr ePlace pTable (Just eTrue) (Just eFalse) expr
       eTrueInstr <- genLabel eTrue
       s1Instrs <- mapM (genStmt (table, pTable)) s1
       gotoSAfter <- genUncond sAfter
@@ -368,7 +386,7 @@ genStmt (table, pTable) (While _ expr stmts)
           eFalse = sAfter
       
       sBeginInstr <- genLabel sBegin   
-      (eType, eInstrs) <- genExpr expr ePlace pTable (Just eTrue) (Just eFalse)
+      (eType, eInstrs) <- genExpr ePlace pTable (Just eTrue) (Just eFalse) expr
       sBodyInstr <- genLabel sBody
       sInstrs <- mapM (genStmt (table, pTable)) stmts
       gotoSBegin <- genUncond sBegin
@@ -378,17 +396,32 @@ genStmt (table, pTable) (While _ expr stmts)
                    gotoSBegin ++ sAfterInstr
 
       return instrs
-      
+
+-------------------------------------------------------------------------------
+-- genParameterPassing generates instructions for taking the results from the 
+-- caller which is present in the registers and saves them into the appropriate
+-- stack slot for use by the procedure.
+--
+-- The parameter values in the registers are allocated based on order of the 
+-- procedure arguments and they correspond to the first n slots of the stack 
+-- slot of the procedure where n is the number of arguments of the procedure
+-------------------------------------------------------------------------------
+genParameterPassing :: Int -> [Instr]
+genParameterPassing i
+  = [Store (Slot i) (Reg i) | i <- [0..i-1]]
 
 genProc :: GlobalSymTable -> Proc -> Codegen ProcCode
-genProc table (Proc _ ident _ _ stmts)
+genProc table (Proc _ ident args _ stmts)
   = do
       let (ProcInfo _ procTable) = fromJust $ getProcInfo ident table 
           stackFrameSize = getSize procTable
+          labelInstr = [LabelI ident]
           epilogue = [PushSF stackFrameSize]
+          paramStore = genParameterPassing (length args)
           prologue = [PopSF stackFrameSize, Return]
       stmtInstrs <- mapM (genStmt (table, procTable)) stmts
-      return $ ProcCode ident (epilogue ++ (concat stmtInstrs) ++ prologue)
+      return $ ProcCode ident (labelInstr ++ epilogue ++ paramStore ++ 
+                               (concat stmtInstrs) ++ prologue)
 
 genProcs :: GlobalSymTable -> [Proc] -> Codegen [ProcCode]
 genProcs table procs
