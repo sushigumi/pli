@@ -40,9 +40,7 @@ import Data.Maybe
 
 logError :: String -> Pos -> IO ()
 logError str (col, line)
-  = do
-      putStrLn $ str ++ "at line " ++ (show line) ++ " column " ++ (show col)
-      exitWith (ExitFailure 4)
+  = putStrLn $ str ++ "at line " ++ (show line) ++ " column " ++ (show col)
 
 
 aExpr :: ProcSymTable -> Expr -> IO BaseType
@@ -62,7 +60,7 @@ aExpr pTable (Id pos ident)
   = do
       let idInfo = getVarInfo ident pTable
       idType <- case idInfo of
-                  Just (VarInfo bType _ _) -> return bType 
+                  Just (VarInfo bType _ _ _) -> return bType 
                   Nothing -> do
                                logError "undeclared variable" pos
                                exitWith (ExitFailure 4)
@@ -73,7 +71,7 @@ aExpr pTable (ArrayRef pos ident expr)
   = do
       let arrayInfo = getVarInfo ident pTable
       arrayType <- case arrayInfo of  
-                     Just (VarInfo bType _ _) -> return bType
+                     Just (VarInfo bType _ _ _) -> return bType
                      Nothing -> do
                                   logError "undeclared variable" pos
                                   exitWith (ExitFailure 4)
@@ -99,7 +97,7 @@ aExpr pTable (MatrixRef pos ident e1 e2)
         do
           let matrixInfo = getVarInfo ident pTable
           case matrixInfo of
-            Just (VarInfo bType _ _) -> return bType
+            Just (VarInfo bType _ _ _) -> return bType
             Nothing -> do
                          logError "undeclared variable" pos
                          exitWith (ExitFailure 4)
@@ -237,7 +235,7 @@ aExpr pTable (UMinus pos expr)
         return eType
 
 getLvalueType :: Maybe VarInfo -> Pos-> IO BaseType
-getLvalueType (Just (VarInfo bType _ _)) pos
+getLvalueType (Just (VarInfo bType _ _ _)) pos
   = return bType
 getLvalueType Nothing pos
   = do
@@ -290,7 +288,7 @@ aStmt (table, pTable) (ProcCall pos ident exprs)
                    let errmsg = "procedure " ++ ident ++ " of arity " ++ 
                                 (show (length eTypes)) ++ " does not exist"
                    logError errmsg pos
-
+                   exitWith (ExitFailure 4)
                else
                  do
                    let zipTypes = zip eTypes argTypes
