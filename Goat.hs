@@ -19,6 +19,7 @@ import CodePrint
 import CodeGen
 import System.Environment
 import System.Exit
+import Data.Map.Internal.Debug
 
 -------------------------------------------------------------------------------
 -- This is the starting point for the Goat parser and parses the whole Goat 

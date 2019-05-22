@@ -386,7 +386,7 @@ initAnalyse ((Proc pos ident args decls stmts):procs) table
     
     (newSlot, procSymTable1) = insertArgs args 0 procSymTable
 
-    procSymTable2 = insertVars decls newSlot procSymTable
+    procSymTable2 = insertVars decls newSlot procSymTable1
 
     table1 = updateProcSymTable ident args procSymTable2 table
 
