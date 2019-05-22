@@ -24,6 +24,11 @@ incLabelCounter
       put (label + 1)
       return ()
 
+getMatrixOffsetInstrs :: Int ->Reg -> Reg -> Reg -> [Instr]
+getMatrixOffsetInstrs m e1Reg e2Reg constReg
+  = [(IntConstI constReg m), 
+     (BinopInstr MulInt e1Reg e1Reg constReg),
+     (BinopInstr AddInt e1Reg e1Reg e2Reg)]
 
 genLabel :: Label -> Codegen [Instr]
 genLabel label
@@ -64,18 +69,68 @@ genExpr r _ _ _ _ (FloatConst _ val)
 genExpr r _ _ _ _ (StrConst _ val)
   = return (StringType, [StringConstI r val])
 
-genExpr r procTable _ _ (Just Ref) (Id pos ident)
+genExpr r procTable _ _ (Just Ref) (Id _ ident)
   = do
-      let (VarInfo baseType _ s) = fromJust $ getVarInfo ident procTable
+      let (VarInfo baseType _ s _) = fromJust $ getVarInfo ident procTable
       return (baseType, [LoadAddr r s])
 
-genExpr r procTable _ _ _ (Id pos ident)
+genExpr r procTable _ _ _ (Id _ ident)
   = do
-      let (VarInfo baseType mode s) = fromJust $ getVarInfo ident procTable 
+      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable 
       case mode of
         Val -> return (baseType, [Load r s])
         Ref -> return (baseType, [(Load r s), (LoadIndr r r)])
-      return (baseType, [Load r s])
+
+genExpr r procTable _ _ (Just Ref) (ArrayRef _ ident nexpr)
+  = do
+      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
+
+          loadInstr = [LoadAddr r s]
+          offset = [BinopInstr SubOff r r nReg]
+      (nType, nInstrs) <- genExpr nReg procTable Nothing Nothing Nothing nexpr
+      let instrs = loadInstr ++ nInstrs ++ offset
+
+      return (baseType, instrs) 
+  where
+    (Reg baseReg) = r
+    nReg = Reg (baseReg + 1)
+
+genExpr r procTable _ _ _ (ArrayRef _ ident nexpr)
+  = do
+      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
+          loadInstr = [LoadAddr r s]
+          offset = [BinopInstr SubOff r r nReg]
+          loadIndr = [LoadIndr r r]
+      (nType, nInstrs) <- genExpr nReg procTable Nothing Nothing Nothing nexpr
+      let instrs = loadInstr ++ nInstrs ++ offset ++ loadIndr
+
+      return (baseType, instrs)
+  where
+    (Reg baseReg) = r
+    nReg = Reg (baseReg + 1)
+
+genExpr r procTable _ _ callMode (MatrixRef _ ident mexpr nexpr)
+  = do
+      let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident procTable
+          (MatrixInfo m _) = info
+          loadInstr = [LoadAddr r s]
+          offset = [(IntConstI constReg m),
+                    (BinopInstr MulInt mReg mReg constReg),
+                    (BinopInstr AddInt mReg mReg nReg),
+                    (BinopInstr SubOff r r mReg)]
+          loadIndr = case callMode of
+                       Just Ref -> []
+                       _ -> [LoadIndr r r]
+            
+      (mType, mInstrs) <- genExpr mReg procTable Nothing Nothing Nothing mexpr
+      (nType, nInstrs) <- genExpr nReg procTable Nothing Nothing Nothing nexpr
+      let instrs = loadInstr ++ mInstrs ++ nInstrs ++ offset ++ loadIndr
+      return (baseType, instrs)
+  where
+    (Reg baseReg) = r
+    mReg = Reg (baseReg + 1)
+    nReg = Reg (baseReg + 2)
+    constReg = Reg (baseReg + 3)
 
 -- Maybe handle nothing here so that nothing means there is no cond
 genExpr r procTable (Just tLabel) (Just fLabel) _ (And _ e1 e2)
@@ -275,13 +330,18 @@ genExpr r procTable _ _ _ (UMinus _ expr)
           instrs = exprInstrs ++ [UnopInstr op r r]
     
       return (exprType, instrs)
-    
+ 
+genReadInstr :: BaseType -> [Instr]
+genReadInstr IntType = [CallBuiltin ReadInt]
+genReadInstr FloatType = [CallBuiltin ReadReal]
+genReadInstr BoolType = [CallBuiltin ReadBool]
+   
 
 genStmt :: (GlobalSymTable, ProcSymTable) -> Stmt -> Codegen [Instr]
 
-genStmt (table, pTable) (Assign _ lvalue expr)
+genStmt (table, pTable) (Assign _ (LId _ ident) expr)
   = do 
-      let (VarInfo baseType mode slot) = fromJust $ getVarInfo ident pTable
+      let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
           (exprPlace, loadInstr) = case mode of
                                      Val -> ((Reg 0), [])
                                      Ref -> ((Reg 1), [Load (Reg 0) slot])
@@ -289,27 +349,75 @@ genStmt (table, pTable) (Assign _ lvalue expr)
                          Val -> [Store slot exprPlace]
                          Ref -> [StoreIndr (Reg 0) exprPlace]
       (eType, eInstrs) <- genExpr exprPlace pTable Nothing Nothing Nothing expr
+
+      let convInstr = if (baseType == FloatType && eType == IntType) then
+                        [IntToReal exprPlace exprPlace]
+                      else
+                        []
         
-      return $ loadInstr ++ eInstrs ++ storeInstr
+      return $ loadInstr ++ eInstrs ++ convInstr ++ storeInstr
 
-  where
-    ident = case lvalue of
-              (LId _ ident) -> ident
-              (LArrayRef _ ident _) -> ident
-              (LMatrixRef _ ident _ _) -> ident
-
-genStmt (table, pTable) (Read _ lvalue)
+genStmt (table, pTable) (Assign _ (LArrayRef _ ident nexpr) expr)
   = do
-      let ident = case lvalue of
-            LId _ i -> i
-            LArrayRef _ i _ -> i
-            LMatrixRef _ i _ _ -> i
-          (VarInfo baseType mode s) = fromJust $ getVarInfo ident pTable
+      let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
+
+          loadInstr = [LoadAddr r slot]
+          subOff = [BinopInstr SubOff r r nReg]
+          storeInstr = [StoreIndr r eReg]
+          
+      (nType, nInstrs) <- genExpr nReg pTable Nothing Nothing Nothing nexpr
+      (eType, eInstrs) <- genExpr eReg pTable Nothing Nothing Nothing expr
+
+      let convInstr = if (baseType == FloatType && eType == IntType) then
+                        [IntToReal eReg eReg]
+                      else
+                        []
+          instrs = loadInstr ++ nInstrs ++ eInstrs ++ subOff ++ convInstr ++ 
+                   storeInstr
+    
+      return $ instrs
+  where
+    baseReg = 0
+    r = (Reg baseReg)
+    nReg = (Reg (baseReg + 1))
+    eReg = (Reg (baseReg + 2))
+
+genStmt (table, pTable) (Assign _ (LMatrixRef _ ident mexpr nexpr) expr)
+  = do
+      let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
+          (MatrixInfo m _) = info
+          loadInstr = [LoadAddr r slot]
+          subOff = [(IntConstI constReg m),
+                    (BinopInstr MulInt mReg mReg constReg),
+                    (BinopInstr AddInt mReg mReg nReg),
+                    (BinopInstr SubOff r r mReg)]
+          storeInstr = [StoreIndr r eReg]
+
+      (mType, mInstrs) <- genExpr mReg pTable Nothing Nothing Nothing mexpr
+      (nType, nInstrs) <- genExpr nReg pTable Nothing Nothing Nothing nexpr
+      (eType, eInstrs) <- genExpr eReg pTable Nothing Nothing Nothing expr
+
+      let convInstr = if (baseType == FloatType && eType == IntType) then
+                        [IntToReal eReg eReg]
+                      else
+                        []
+
+          instrs = loadInstr ++ mInstrs ++ nInstrs ++ eInstrs ++ subOff ++
+                     convInstr ++ storeInstr
+      return $ instrs
+  where
+    baseReg = 0
+    r = Reg baseReg
+    mReg = Reg (baseReg + 1)
+    nReg = Reg (baseReg + 2)
+    constReg = Reg (baseReg + 3)
+    eReg = Reg (baseReg + 4)
+
+genStmt (table, pTable) (Read _ (LId _ ident))
+  = do
+      let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident pTable
       
-          readInstr = case baseType of
-                        IntType -> [CallBuiltin ReadInt]
-                        FloatType -> [CallBuiltin ReadReal]
-                        BoolType -> [CallBuiltin ReadBool]
+          readInstr = genReadInstr baseType
 
           loadInstr = case mode of
                         Val -> []
@@ -320,6 +428,59 @@ genStmt (table, pTable) (Read _ lvalue)
                          Ref -> [StoreIndr (Reg 1) (Reg 0)]
 
       return $ loadInstr ++ readInstr ++ storeInstr
+
+
+genStmt (table, pTable) (Read _ (LArrayRef _ ident nexpr))
+  = do
+      let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident pTable
+          readInstr = genReadInstr baseType
+
+          loadInstr = [LoadAddr r s]
+
+          subOff = [BinopInstr SubOff r r nReg]
+
+          storeInstr = [StoreIndr r readReg]
+
+      (nType, nInstrs) <- genExpr nReg pTable Nothing Nothing Nothing nexpr
+
+      let instrs = readInstr ++ loadInstr ++ nInstrs ++ subOff ++ storeInstr
+
+      return instrs
+  where
+    readReg = (Reg 0)
+    baseReg = 1
+    r = Reg baseReg
+    nReg = Reg (baseReg + 1)
+
+genStmt (table, pTable) (Read _ (LMatrixRef _ ident mexpr nexpr)) 
+  = do
+      let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident pTable
+          (MatrixInfo m _) = info
+          readInstr = genReadInstr baseType
+          
+          loadInstr = [LoadAddr r s]
+          subOff = [(IntConstI constReg m),
+                    (BinopInstr MulInt mReg mReg constReg),
+                    (BinopInstr AddInt mReg mReg nReg),
+                    (BinopInstr SubOff r r mReg)]
+
+          storeInstr = [StoreIndr r readReg]
+
+      (mType, mInstrs) <- genExpr mReg pTable Nothing Nothing Nothing mexpr
+      (nType, nInstrs) <- genExpr nReg pTable Nothing Nothing Nothing nexpr
+
+      let instrs = readInstr ++ loadInstr ++ mInstrs ++ nInstrs ++ subOff ++
+                     storeInstr
+    
+      return instrs
+
+  where
+    readReg = (Reg 0)
+    baseReg = 1
+    r = Reg baseReg
+    mReg = Reg (baseReg + 1)
+    nReg = Reg (baseReg + 2)
+    constReg = Reg (baseReg + 3)
 
 genStmt (table, pTable) (Write _ expr)
   = do
@@ -446,7 +607,7 @@ genStmt (table, pTable) (While _ expr stmts)
 -------------------------------------------------------------------------------
 genParameterPassing :: [ProcArg] -> [Instr]
 genParameterPassing args
-  = [Store (Slot i) (Reg i) | i <- [0..(length args)-1]]
+  = [Store (Slot i) (Reg i) | i <- [0..((length args)-1)]]
 --  = [genStore mode i | (mode, i) <- argTypeCounter]
 --  where
 --    argTypes = [mode | (ProcArg _ mode _ _) <- args]
@@ -458,17 +619,42 @@ genParameterPassing args
 --        else (StoreIndr (Slot i) (Reg i))
 
 genProc :: GlobalSymTable -> Proc -> Codegen ProcCode
-genProc table (Proc _ ident args _ stmts)
+genProc table (Proc _ ident args decls stmts)
   = do
       let (ProcInfo _ procTable) = fromJust $ getProcInfo ident table 
-          stackFrameSize = getSize procTable
+          loadInitialValues = [(IntConstI intReg 0), (RealConstI floatReg 0.0)]
+          storeInstrs = genStoreInstrs decls startSlot
+          stackFrameSize = getStackFrameSize procTable
           labelInstr = [LabelI ident]
           epilogue = [PushSF stackFrameSize]
           paramStore = genParameterPassing args
           prologue = [PopSF stackFrameSize, Return]
       stmtInstrs <- mapM (genStmt (table, procTable)) stmts
       return $ ProcCode ident (labelInstr ++ epilogue ++ paramStore ++ 
+                               loadInitialValues ++ storeInstrs ++
                                (concat stmtInstrs) ++ prologue)
+  where
+    intReg = Reg 0
+    floatReg = Reg 1
+    startSlot = length args
+
+    genStoreInstrs :: [Decl] -> Int -> [Instr]
+    genStoreInstrs [] _ = []
+    genStoreInstrs ((Decl _ _ dType):decls) s
+      = instr ++ (genStoreInstrs decls nxt)
+      where
+        (nxt, instr) = case dType of
+                         Base bType 
+                           -> (s+1, [sInstr bType s])
+                         Array bType n 
+                           -> (s+n, [sInstr bType (s+i) | i <- [0..(n-1)]])
+                         Matrix bType m n
+                           -> (s+m*n, [sInstr bType (s+i) | i <- [0..(m*n-1)]])
+
+        sInstr :: BaseType -> Int -> Instr
+        sInstr bType slotVal
+          | bType == FloatType = Store (Slot slotVal) floatReg
+          | otherwise = Store (Slot slotVal) intReg
 
 genProcs :: GlobalSymTable -> [Proc] -> Codegen [ProcCode]
 genProcs table procs

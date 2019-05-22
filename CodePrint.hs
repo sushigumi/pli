@@ -72,10 +72,10 @@ pInstr (BinopInstr binop r1 r2 r3)
     binopToStr :: BinopI -> String
     binopToStr AddInt = "add_int"
     binopToStr AddReal = "add_real"
-    binopToStr AddOff = "add_off"
+    binopToStr AddOff = "add_offset"
     binopToStr SubInt = "sub_int"
     binopToStr SubReal = "sub_real"
-    binopToStr SubOff = "sub_off"
+    binopToStr SubOff = "sub_offset"
     binopToStr MulInt = "mul_int"
     binopToStr MulReal = "mul_real"
     binopToStr DivInt = "div_int"

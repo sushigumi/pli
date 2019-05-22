@@ -6,8 +6,15 @@ import GoatIR
 
 -- Probably need to store the enclosing scope inside
 -- Maybe a Nothignt o represent whether it s a val or ref or nothing
+
+data AddVarInfo
+  = IdInfo
+  | ArrayInfo Int
+  | MatrixInfo Int Int
+  deriving (Show, Eq)
+
 data VarInfo
-  = VarInfo BaseType ArgMode Slot
+  = VarInfo BaseType ArgMode Slot AddVarInfo
   deriving (Show, Eq)
 
 -- STORE ENCLOSING SCOPE INSIDE
@@ -36,11 +43,13 @@ insertVar :: Decl -> Int -> ProcSymTable -> (Int, ProcSymTable)
 insertVar (Decl _ ident decltype) s table
   = case decltype of
       Base baseType 
-        -> (s+1, Map.insert ident (VarInfo baseType Val (Slot s)) table)
+        -> (s+1, Map.insert ident (VarInfo baseType Val (Slot s) IdInfo) table)
       Array baseType n 
-        -> (s+n, Map.insert ident (VarInfo baseType Val (Slot s)) table)
+        -> (s+n, Map.insert ident (VarInfo baseType Val (Slot s) (ArrayInfo n))
+            table)
       Matrix baseType m n 
-        -> (s+m*n, Map.insert ident (VarInfo baseType Val (Slot s)) table)
+        -> (s+m*n, Map.insert ident (VarInfo baseType Val (Slot s)
+            (MatrixInfo m n)) table)
 
 insertVars :: [Decl] -> Int -> ProcSymTable -> ProcSymTable
 insertVars [] _ table
@@ -52,7 +61,7 @@ insertVars (d:decls) slot table
 
 insertArg :: ProcArg -> Int -> ProcSymTable -> (Int, ProcSymTable)
 insertArg (ProcArg _ mode baseType ident) s table
-  = (s+1, Map.insert ident (VarInfo baseType mode (Slot s)) table)
+  = (s+1, Map.insert ident (VarInfo baseType mode (Slot s) IdInfo) table)
 
 insertArgs :: [ProcArg] -> Int -> ProcSymTable -> (Int, ProcSymTable)
 insertArgs [] slot table
@@ -77,6 +86,20 @@ getVarInfo :: String -> ProcSymTable -> Maybe VarInfo
 getVarInfo ident procTable
   = Map.lookup ident procTable
 
+getStackFrameSize :: ProcSymTable -> Int
+getStackFrameSize table 
+  = countSize procInfos
+  where
+    procInfos = Map.elems table
+
+    countSize [] = 0
+    countSize (v:vs) 
+      = case info of
+          IdInfo -> 1 + (countSize vs)
+          ArrayInfo n -> n + (countSize vs)
+          MatrixInfo m n -> m * n + (countSize vs)
+      where
+        (VarInfo _ _ _ info) = v
 
 getSize :: Map.Map k a -> Int
 getSize table
