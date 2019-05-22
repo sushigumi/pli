@@ -7,7 +7,7 @@
 -- syntax tree based on data structures declared in GoatAST.hs
 -- This pretty printer prints to stdout
 
-module PrettyGoat where
+module PrettyGoat (prettyPrint) where
 import GoatAST
 
 -------------------------------------------------------------------------------
@@ -20,7 +20,7 @@ printIdent ident = putStr ident
 -------------------------------------------------------------------------------
 -- Print list of arguments. Only add ", " if there are more than one arguments
 -------------------------------------------------------------------------------
-printArgs :: [FuncArg] -> IO ()
+printArgs :: [ProcArg] -> IO ()
 printArgs [] = return ()
 printArgs [x] = printArg x
 printArgs (arg:funcArgs) =
@@ -33,13 +33,13 @@ printArgs (arg:funcArgs) =
 -------------------------------------------------------------------------------
 -- Print one argument
 -------------------------------------------------------------------------------
-printArg :: FuncArg -> IO ()
-printArg (Val baseType ident) =
+printArg :: ProcArg -> IO ()
+printArg (Val _ baseType ident) =
   do
     putStr "val "
     printBaseType baseType
     printIdent ident
-printArg (Ref baseType ident) =
+printArg (Ref _ baseType ident) =
   do
     putStr "ref "
     printBaseType baseType
@@ -69,7 +69,7 @@ printDecls (decl:decls) =
 -- Print declaration
 -------------------------------------------------------------------------------
 printDecl :: Decl -> IO ()
-printDecl (Decl baseType var) =
+printDecl (Decl _ baseType var) =
   do
     putStr (indent 1)
     printBaseType baseType
@@ -81,16 +81,16 @@ printDecl (Decl baseType var) =
 -- Print variable. Add brackets around if it's an array
 -------------------------------------------------------------------------------
 printVar :: Var -> IO ()
-printVar (Elem ident) = printIdent ident
+printVar (Elem _ ident) = printIdent ident
 
-printVar (Array1d ident expr) =
+printVar (Array1d _ ident expr) =
   do
     printIdent ident
     putStr "["
     printExpr expr
     putStr "]"
 
-printVar (Array2d ident exprL exprR) =
+printVar (Array2d _ ident exprL exprR) =
   do
     printIdent ident
     putStr "["
@@ -115,7 +115,7 @@ printStmts (st:stmts) n =
 -------------------------------------------------------------------------------
 printStmt :: Stmt -> Int -> IO ()
 
-printStmt (Assign l expr) n =
+printStmt (Assign _ l expr) n =
   do
     putStr (indent n)
     printLvalue l
@@ -123,19 +123,19 @@ printStmt (Assign l expr) n =
     printExpr expr
     putStrLn ";"
 
-printStmt (Read l) n =
+printStmt (Read _ l) n =
   do
     putStr (indent n ++ "read ")
     printLvalue l
     putStrLn ";"
 
-printStmt (Write expr) n =
+printStmt (Write _ expr) n =
   do
     putStr (indent n ++ "write ")
     printExpr expr
     putStrLn ";"
 
-printStmt (Call ident exprs) n =
+printStmt (Call _ ident exprs) n =
   do
     putStr (indent n ++ "call ")
     printIdent ident
@@ -144,7 +144,7 @@ printStmt (Call ident exprs) n =
     putStrLn ");"
 
 -- n is used to handle level of indentation
-printStmt (If expr stmts) n =
+printStmt (If _ expr stmts) n =
   do
     putStr (indent n ++ "if ")
     printExpr expr
@@ -152,7 +152,7 @@ printStmt (If expr stmts) n =
     printStmts stmts (n+1)
     putStrLn (indent n ++ "fi")
 
-printStmt (IfElse expr stmtsIf stmtsElse) n =
+printStmt (IfElse _ expr stmtsIf stmtsElse) n =
   do
     putStr (indent n ++ "if ")
     printExpr expr
@@ -162,7 +162,7 @@ printStmt (IfElse expr stmtsIf stmtsElse) n =
     printStmts stmtsElse (n+1)
     putStrLn (indent n ++ "fi")
 
-printStmt (While expr stmts) n =
+printStmt (While _ expr stmts) n =
   do
     putStr (indent n ++ "while ")
     printExpr expr
@@ -188,21 +188,21 @@ printExprs (e:exprs) =
 -- Print out Lvalue
 -------------------------------------------------------------------------------
 printLvalue :: Lvalue -> IO ()
-printLvalue (Lvalue var) = printVar var
+printLvalue (Lvalue _ var) = printVar var
 
 
 -------------------------------------------------------------------------------
 -- Print expression
 -------------------------------------------------------------------------------
 printExpr :: Expr -> IO ()
-printExpr (BoolConst b) = if b then putStr "true" else putStr "false"
-printExpr (IntConst i) = putStr (show i)
-printExpr (FloatConst f) = putStr (show f)
-printExpr (StrConst s) = putStr ("\"" ++ s ++ "\"")
-printExpr (Id var) = printVar var
+printExpr (BoolConst _ b) = if b then putStr "true" else putStr "false"
+printExpr (IntConst _ i) = putStr (show i)
+printExpr (FloatConst _ f) = putStr (show f)
+printExpr (StrConst _ s) = putStr ("\"" ++ s ++ "\"")
+printExpr (Id _ var) = printVar var
 
 -- Here we only add () around expression if expression is a binary operation
-printExpr (BinopExpr binop exprL exprR) =
+printExpr (BinopExpr _ binop exprL exprR) =
   do
     if isBinopExpr exprL then
       do
@@ -220,7 +220,7 @@ printExpr (BinopExpr binop exprL exprR) =
     else
       printExpr exprR
 
-printExpr (UnopExpr unop expr) =
+printExpr (UnopExpr _ unop expr) =
   do
     printUnop unop
     printExpr expr
@@ -253,10 +253,10 @@ printUnop UMinus = putStr "-"
 
 
 -------------------------------------------------------------------------------
--- printFunc is a function used to print individual functions from the program
+-- printProc is a function used to print individual functions from the program
 -------------------------------------------------------------------------------
-printFunc :: Func -> IO ()
-printFunc (Func ident args decls stmts)
+printProc :: Proc -> IO ()
+printProc (Proc _ ident args decls stmts)
   = do
       putStr "proc "
       printIdent ident
@@ -276,10 +276,10 @@ printFunc (Func ident args decls stmts)
 prettyPrint :: GoatProgram -> IO ()
 prettyPrint (GoatProgram [])
   = return ()
-prettyPrint (GoatProgram [f]) = printFunc f
+prettyPrint (GoatProgram [f]) = printProc f
 prettyPrint (GoatProgram (f:funcs))
   = do
-      printFunc f
+      printProc f
       putStrLn ""
       prettyPrint (GoatProgram funcs)
 
@@ -296,10 +296,10 @@ indent n = take (n*4) (repeat ' ')
 -- isBinopExpr is a function used to determine whether an expr is binary op expr
 -------------------------------------------------------------------------------
 isBinopExpr :: Expr -> Bool
-isBinopExpr (BinopExpr _ _ _) = True
-isBinopExpr (BoolConst _) = False
-isBinopExpr (IntConst _) = False
-isBinopExpr (FloatConst _) = False
-isBinopExpr (StrConst _) = False
-isBinopExpr (Id _) = False
-isBinopExpr (UnopExpr _ _) = False
+isBinopExpr (BinopExpr _ _ _ _) = True
+isBinopExpr (BoolConst _ _) = False
+isBinopExpr (IntConst _ _) = False
+isBinopExpr (FloatConst _  _) = False
+isBinopExpr (StrConst _ _) = False
+isBinopExpr (Id _ _) = False
+isBinopExpr (UnopExpr _ _ _) = False

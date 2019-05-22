@@ -14,9 +14,12 @@
 module Main (main) where
 
 import GoatParser
-import PrettyGoat
+import Analyse
+import CodePrint
+import CodeGen
 import System.Environment
 import System.Exit
+import Data.Map.Internal.Debug
 
 -------------------------------------------------------------------------------
 -- This is the starting point for the Goat parser and parses the whole Goat 
@@ -39,9 +42,13 @@ goat task file
       case output of
         Right ast -> case task of
                        Compile -> do
+                                    let symTable = analyse ast
+                                        code = genCode ast symTable
+                                    printCode code
                                     exitWith ExitSuccess
+-- CHANGEN PRETTY PRINT
                        Pretty  -> do
-                                    prettyPrint ast
+                                    print ast
                                     exitWith ExitSuccess
         Left err  -> do 
                        putStr "Parser error at "
