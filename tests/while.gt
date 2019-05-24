@@ -1,0 +1,17 @@
+# Compute the mean and variance of a list of numbers
+
+proc main ()
+    int n;
+    bool done;
+begin
+    n := 3;
+    done := n <= 0;
+    while false do
+        write "H";
+        n := n - 1;
+        done := n <= 0;
+    od
+    write "done";
+    write "\n";
+end
+
