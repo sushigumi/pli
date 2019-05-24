@@ -61,6 +61,11 @@ genExpr r pTable (Just tLabel) (Just fLabel) _ (BoolConst _ val)
   | val == False = return (BoolType, [(IntConstI r 0),
                                       (BranchOnFalse r fLabel)])
 
+genExpr r procTable (Just tLabel) (Just fLabel) _ (Id _ ident)
+  = do
+      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
+      return (baseType, [(Load r s), (BranchOnFalse r fLabel)])
+
 genExpr r _ _ _ _ (BoolConst _ val)
   | val == True =  return (BoolType, [IntConstI r 1])
   | val == False = return (BoolType, [IntConstI r 0])
@@ -215,15 +220,15 @@ genExpr r procTable Nothing Nothing _ (Or _ e1 e2)
     (Reg ePlace) = r
     e1Place = Reg ePlace 
     e2Place = Reg (ePlace + 1)
-    
-      
+
 genExpr r procTable (Just tLabel) (Just fLabel) _ (Not _ expr)
  = do
      let eFalse = tLabel
          eTrue = fLabel
-     (eType, eInstrs) <- genExpr r procTable (Just eTrue) (Just eFalse) 
+     (eType, eInstrs) <- genExpr r procTable Nothing Nothing 
                            Nothing expr
-     return (BoolType, eInstrs)
+     let instrs = eInstrs ++ [BranchOnFalse r tLabel]
+     return (BoolType, instrs)
 
 genExpr r procTable Nothing Nothing _ (Not _ expr)
   = do
@@ -593,7 +598,8 @@ genStmt (table, pTable) (While _ expr stmts)
                             Nothing expr
       sBodyInstr <- genLabel sBody
       sInstrs <- mapM (genStmt (table, pTable)) stmts
-      gotoSBegin <- genUncond sBegin
+      (sType, gotoSBegin) <- genExpr ePlace pTable (Just eTrue) (Just eFalse) 
+                            Nothing expr
       sAfterInstr <- genLabel sAfter
 
       let instrs = sBeginInstr ++ eInstrs ++ sBodyInstr ++ (concat sInstrs) ++
