@@ -326,6 +326,7 @@ aStmt (table, pTable) (Assign pos lvalue expr)
   = do
       let lvalueInfo = getVarInfo ident pTable
 
+      aLvalue pTable lvalue
       lvalueType <- getLvalueType lvalueInfo pos
       eType <- aExpr pTable expr
 
