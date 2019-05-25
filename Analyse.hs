@@ -39,7 +39,7 @@ import Data.Maybe
 --    procCode = aProc pos ident stmts table 
 
 logError :: String -> Pos -> IO ()
-logError str (col, line)
+logError str (line, col)
   = putStrLn $ str ++ "at line " ++ (show line) ++ " column " ++ (show col)
 
 
