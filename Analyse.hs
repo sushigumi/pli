@@ -387,6 +387,7 @@ aStmt (table, pTable) (ProcCall pos ident exprs)
     cmpTypes (IntType, IntType) = return ()
     cmpTypes (IntType, FloatType) = return ()
     cmpTypes (FloatType, FloatType) = return ()
+    cmpTypes (BoolType, BoolType) = return ()
     cmpTypes _ = do
                    logError "incorrect procedure parameter types" pos
                    exitWith (ExitFailure 4)
