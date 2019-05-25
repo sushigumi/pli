@@ -1,3 +1,9 @@
+-- GoatIR.hs
+-- Authors: Wen Tze Joshua Leong (wleong3)
+--          Yiyue Wang (yiyue)
+-- This module contains all the data types required for the intermediate 
+-- code generation from the Goat Program
+
 module GoatIR where
 
 import GoatAST

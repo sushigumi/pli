@@ -1,18 +1,34 @@
+-- CodePrint.hs
+-- Authors: Wen Tze Joshua Leong (wleong3)
+--          Yiyue Wang (yiyue)
+-- This module contains printing for the instructions obtained for a Goat
+-- Program.
+-- The instructions are printed to the Intermediate Representation form 
+-- required for the Oz emulator and is printed to standard output
+
 module CodePrint (printCode) where
 
 import GoatAST
 import GoatIR
 
+-------------------------------------------------------------------------------
+-- pLabel prints the label instruction
+-------------------------------------------------------------------------------
 pLabel :: String -> IO ()
 pLabel label
   = putStrLn $ "label_" ++ label ++ ":"
 
+-------------------------------------------------------------------------------
+-- showLabel converts the label into a string form
+-------------------------------------------------------------------------------
 showLabel :: String -> String
 showLabel label
   = "label_" ++ label
 
+-------------------------------------------------------------------------------
+-- pInstr prints the instruction 
+-------------------------------------------------------------------------------
 pInstr :: Instr -> IO ()
-
 pInstr (PushSF size) 
   = do
       pIndent
@@ -177,11 +193,18 @@ pIndent
   = do
       putStr "    "
 
+-------------------------------------------------------------------------------
+-- pProc prints the instructions contained in the procedures
+-------------------------------------------------------------------------------
 pProc :: ProcCode -> IO ()
 pProc (ProcCode ident instrs)
   = do
       mapM_ pInstr instrs
 
+-------------------------------------------------------------------------------
+-- printCode is called on a Instructions for a Goat program to print it to 
+-- stdout
+-------------------------------------------------------------------------------
 printCode :: [ProcCode] -> IO ()
 printCode procs
   = do
