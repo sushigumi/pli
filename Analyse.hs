@@ -1,4 +1,13 @@
-module Analyse where
+-- Analyse.hs
+-- Authors: Wen Tze Joshua Leong (wleong3)
+--          Yiyue Wang (yiyue)
+-- This module contains all the functions needed for semantic analysis which 
+-- does type checking and other checks before it is ready for code generation
+-- This semantic analysis phase will take care of all the semantic analysis
+-- so that a Goat Program which is free of any errors will be present for the 
+-- code generator to generate intermediate representations
+
+module Analyse (analyse) where
 
 import SymTable
 import qualified Data.Map.Strict as Map
@@ -7,41 +16,19 @@ import GoatIR
 import System.Exit
 import Data.Maybe
 
---aExpr :: Expr -> GlobalSymTable -> Env -> Reg -> [Instr]
---aExpr (StrConst pos str) table e reg
---  = genStrConst reg str
---
---
---aStmt :: Stmt -> GlobalSymTable -> Env -> [Instr]
---aStmt (Write pos expr) table e
---  = eCode ++ genWriteStmt  
---  where
---    eCode = aExpr expr table e (Reg 0)
---
---aStmts :: [Stmt] -> GlobalSymTable -> [Instr] -> Env -> [Instr]
---aStmts [] _ instrs env
---  = instrs 
---aStmts (s:stmts) globalTable instrs env
---  = aStmts stmts globalTable instrs1 env
---  where
---    instrs1 = instrs ++ (aStmt s globalTable env)
---
---aProc :: Pos -> Ident -> [Stmt] -> GlobalSymTable -> [Instr]
---aProc pos ident stmts table
---  = aStmts stmts table [] ident
---
---aProcs :: [Proc] -> GlobalSymTable -> [ProcCode]
---aProcs [] _ 
---  = []
---aProcs ((Proc pos ident _ _ stmts):procs) table
---  = (ProcCode ident procCode) : aProcs procs table
---  where 
---    procCode = aProc pos ident stmts table 
-
+-------------------------------------------------------------------------------
+-- logError is a helper function to log errors based on the position given
+-------------------------------------------------------------------------------
 logError :: String -> Pos -> IO ()
 logError str (line, col)
   = putStrLn $ str ++ " at line " ++ (show line) ++ " column " ++ (show col)
 
+-------------------------------------------------------------------------------
+-- checkArrayExprType and checkMatrixExprType checks the type of the expression
+-- used as the accessor for arrays and matrix. 
+-- If the expressions do not evaluate to an IntType then an error is thrown
+-- and the program exits
+-------------------------------------------------------------------------------
 checkArrayExprType :: ProcSymTable -> Pos -> Expr -> IO ()
 checkArrayExprType pTable pos e
   = do
@@ -66,7 +53,10 @@ checkMatrixExprType pTable pos e1 e2
       else
         return ()
  
-
+-------------------------------------------------------------------------------
+-- aLvalue does semantic analysis of lvalues and returns the base type of the
+-- lvalue analysed
+-------------------------------------------------------------------------------
 aLvalue :: ProcSymTable -> Lvalue -> IO BaseType
 aLvalue pTable (LId pos ident) 
   = do
@@ -100,7 +90,7 @@ aLvalue pTable (LArrayRef pos ident e)
                logError "undeclared variable" pos
                exitWith (ExitFailure 4)
 
-pLvalue pTable (LMatrixRef pos ident e1 e2)
+aLvalue pTable (LMatrixRef pos ident e1 e2)
   = do
       checkMatrixExprType pTable pos e1 e2
      
@@ -117,7 +107,9 @@ pLvalue pTable (LMatrixRef pos ident e1 e2)
                logError "undeclared variable" pos
                exitWith (ExitFailure 4)
 
-                      
+-------------------------------------------------------------------------------
+-- aExpr does semantic analysis and type checking for expressions
+-------------------------------------------------------------------------------
 aExpr :: ProcSymTable -> Expr -> IO BaseType
 aExpr _ (BoolConst pos _)
   = return BoolType
@@ -315,6 +307,9 @@ aExpr pTable (UMinus pos expr)
       else 
         return eType
 
+-------------------------------------------------------------------------------
+-- getLvalueType gets the type of the lvalue 
+-------------------------------------------------------------------------------
 getLvalueType :: Maybe VarInfo -> Pos-> IO BaseType
 getLvalueType (Just (VarInfo bType _ _ _)) pos
   = return bType
@@ -323,6 +318,9 @@ getLvalueType Nothing pos
       logError "undeclared variable" pos
       exitWith (ExitFailure 4)
 
+-------------------------------------------------------------------------------
+-- aStmt does semantic analysis on a statement
+-------------------------------------------------------------------------------
 aStmt :: (GlobalSymTable, ProcSymTable) -> Stmt -> IO ()
 aStmt (table, pTable) (Assign pos lvalue expr) 
   = do
@@ -436,7 +434,12 @@ aStmt (table, pTable) (While pos expr stmts)
           mapM_ (aStmt (table, pTable)) stmts
 
           return ()
-      
+
+-------------------------------------------------------------------------------
+-- aProc does semantic analysis on a procedure.
+-- The main checks that it does is checking the main procedure and it must
+-- have an arity of 0
+-------------------------------------------------------------------------------
 aProc :: GlobalSymTable -> Proc -> IO () 
 aProc table (Proc pos ident args decls stmts)
   = do
@@ -451,20 +454,25 @@ aProc table (Proc pos ident args decls stmts)
 
           return ()
 
--- Analyse all the functions first to store all the parameters and names into
--- the symbol table before proceeding to each function's inside semantic 
+-------------------------------------------------------------------------------
+-- initAnalyse starts analysis of the global procedures first to store all the
+-- parameters and names into the global symbol so that global procedure calls
+-- can be easily detected and verified
+-- This step is done before proceeding to each procedure's inside semantic 
 -- analysis
+-------------------------------------------------------------------------------
 initAnalyse :: [Proc] -> GlobalSymTable -> GlobalSymTable
 initAnalyse [] table
   = table
 initAnalyse ((Proc pos ident args decls stmts):procs) table
   = initAnalyse procs table1
   where
--- Probably print an error for Nothing
     procSymTable 
       = case getProcInfo ident table of
           Just (ProcInfo _ procTable) -> procTable
-          Nothing -> Map.empty
+          Nothing -> do 
+                       logError "undeclared procedure" pos
+                       exitWith (ExitFailure 4)
     
     (newSlot, procSymTable1) = insertArgs args 0 procSymTable
 
@@ -472,12 +480,21 @@ initAnalyse ((Proc pos ident args decls stmts):procs) table
 
     table1 = updateProcSymTable ident args procSymTable2 table
 
+
+-------------------------------------------------------------------------------
+-- analyse starts the semantic analysis of the Goat program
+-- Upon a semantic error of the Goat program, the analyser will print an error
+-- message and exit with a status code of 4
+--
+-------------------------------------------------------------------------------
 analyse :: GoatProgram -> IO GlobalSymTable
 analyse (GoatProgram procs)
   = do
       let startTable = initGlobalTable procs
 
           procInfo = getProcInfo "main" startTable
+
+      checkOneMain procs False
 
       case procInfo of
         Just (ProcInfo _ _) 
@@ -488,3 +505,21 @@ analyse (GoatProgram procs)
         Nothing -> do
                      putStrLn "no procedure called main found"
                      exitWith (ExitFailure 4)
+  where
+    checkOneMain [] hasMain
+      = if hasMain then 
+          return ()
+        else 
+          do 
+            logError "no main procedure found" (0,0)
+            exitWith (ExitFailure 4)
+    checkOneMain ((Proc pos ident _ _ _):ps) hasMain
+      = if hasMain && ident == "main" then
+          do 
+            logError "more than one main found" pos
+            exitWith (ExitFailure 4)
+        else
+          if ident == "main" then
+            checkOneMain ps True
+          else
+            checkOneMain ps False

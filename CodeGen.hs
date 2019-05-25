@@ -1,3 +1,11 @@
+-- CodeGen.hs
+-- Authors: Wen Tze Joshua Leong (wleong3)
+--          Yiyue Wang (yiyue)
+-- This module contains all functions required for code generation to generate
+-- a Goat program into its intermediate representation for the Oz emulator
+-- CodeGen assumes that the abstract syntax tree passed to it is a well-formed
+-- syntax tree and there are no errors
+
 module CodeGen (genCode) where
 
 import GoatAST
@@ -6,6 +14,11 @@ import SymTable
 import Data.Maybe
 import Control.Monad.State
 
+-------------------------------------------------------------------------------
+-- Functions and data types related to the state of the Code generation
+-- The state in this system refers to the label counter which is updated every 
+-- time it is get so that label names are unique
+-------------------------------------------------------------------------------
 type LabelCounter = Int
 
 type Codegen a
@@ -24,16 +37,18 @@ incLabelCounter
       put (label + 1)
       return ()
 
-getMatrixOffsetInstrs :: Int ->Reg -> Reg -> Reg -> [Instr]
-getMatrixOffsetInstrs m e1Reg e2Reg constReg
-  = [(IntConstI constReg m), 
-     (BinopInstr MulInt e1Reg e1Reg constReg),
-     (BinopInstr AddInt e1Reg e1Reg e2Reg)]
-
+-------------------------------------------------------------------------------
+-- genLabel generates a Label instruction 
+-------------------------------------------------------------------------------
 genLabel :: Label -> Codegen [Instr]
 genLabel label
   = return [LabelI label]
 
+-------------------------------------------------------------------------------
+-- genBranchOnTrue and genBranchonFalse generates branches upon true and false
+-- in the stated registers
+-- genUncond generates an unconditional branch instruction
+-------------------------------------------------------------------------------
 genBranchOnTrue :: Label -> Reg -> Codegen [Instr]
 genBranchOnTrue label r 
   = return [BranchOnTrue r label] 
@@ -46,14 +61,18 @@ genUncond :: Label -> Codegen [Instr]
 genUncond label
   = return [BranchUncond label]
 
-
+-------------------------------------------------------------------------------
+-- genIntToReal generates the instruction for IntToReal
+-------------------------------------------------------------------------------
 genIntToReal :: Reg -> Reg -> BaseType -> BaseType -> Codegen [Instr]
 genIntToReal r1 r2 b1 b2
   | b1 == IntType && b2 == FloatType = return [IntToReal r1 r1]
   | b2 == IntType && b1 == FloatType = return [IntToReal r2 r2]
   | otherwise = return []
 
-
+-------------------------------------------------------------------------------
+-- genExpr generates instructions for an expression
+-------------------------------------------------------------------------------
 genExpr :: Reg -> ProcSymTable -> Maybe Label -> Maybe Label -> Maybe ArgMode
            -> Expr -> Codegen (BaseType, [Instr])
 genExpr r pTable (Just tLabel) (Just fLabel) _ (BoolConst _ val)
@@ -170,7 +189,6 @@ genExpr r procTable tLabelMaybe fLabelMaybe callMode (MatrixRef _ ident mexpr ne
     nReg = Reg (baseReg + 2)
     constReg = Reg (baseReg + 3)
 
--- Maybe handle nothing here so that nothing means there is no cond
 genExpr r procTable (Just tLabel) (Just fLabel) _ (And _ e1 e2)
   = do
       e1TrueLabel <- getLabelCounter
@@ -367,33 +385,19 @@ genExpr r procTable _ _ _ (UMinus _ expr)
           instrs = exprInstrs ++ [UnopInstr op r r]
     
       return (exprType, instrs)
- 
+
+-------------------------------------------------------------------------------
+-- genReadInstr generates the read instructions
+-------------------------------------------------------------------------------
 genReadInstr :: BaseType -> [Instr]
 genReadInstr IntType = [CallBuiltin ReadInt]
 genReadInstr FloatType = [CallBuiltin ReadReal]
 genReadInstr BoolType = [CallBuiltin ReadBool]
    
-
+-------------------------------------------------------------------------------
+-- genStmt generates instructions for a statment
+-------------------------------------------------------------------------------
 genStmt :: (GlobalSymTable, ProcSymTable) -> Stmt -> Codegen [Instr]
-
---genStmt (table, pTable) (Assign _ (LId _ ident) expr)
---  = do 
---      let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
---          (exprPlace, loadInstr) = case mode of
---                                     Val -> ((Reg 0), [])
---                                     Ref -> ((Reg 1), [Load (Reg 0) slot])
---          storeInstr = case mode of
---                         Val -> [Store slot exprPlace]
---                         Ref -> [StoreIndr (Reg 0) exprPlace]
---      (eType, eInstrs) <- genExpr exprPlace pTable Nothing Nothing Nothing expr
---
---      let convInstr = if (baseType == FloatType && eType == IntType) then
---                        [IntToReal exprPlace exprPlace]
---                      else
---                        []
---        
---      return $ loadInstr ++ eInstrs ++ convInstr ++ storeInstr
-
 genStmt (table, pTable) (Assign _ (LId _ ident) expr)
   = do
       let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
@@ -673,16 +677,10 @@ genStmt (table, pTable) (While _ expr stmts)
 genParameterPassing :: [ProcArg] -> [Instr]
 genParameterPassing args
   = [Store (Slot i) (Reg i) | i <- [0..((length args)-1)]]
---  = [genStore mode i | (mode, i) <- argTypeCounter]
---  where
---    argTypes = [mode | (ProcArg _ mode _ _) <- args]
---    argTypeCounter = zip argTypes [0..i-1]
---
---    genStore :: ArgMode -> Int -> Instr
---    genStore mode i
---      = if mode == Val then (Store (Slot i) (Reg i))
---        else (StoreIndr (Slot i) (Reg i))
 
+-------------------------------------------------------------------------------
+-- genProc generates instructions for a procedure
+-------------------------------------------------------------------------------
 genProc :: GlobalSymTable -> Proc -> Codegen ProcCode
 genProc table (Proc _ ident args decls stmts)
   = do
@@ -721,12 +719,19 @@ genProc table (Proc _ ident args decls stmts)
           | bType == FloatType = Store (Slot slotVal) floatReg
           | otherwise = Store (Slot slotVal) intReg
 
+-------------------------------------------------------------------------------
+-- genProcs is a helper function for generating instructions for all the 
+-- procedures
+-------------------------------------------------------------------------------
 genProcs :: GlobalSymTable -> [Proc] -> Codegen [ProcCode]
 genProcs table procs
   = do
       procCodes <- mapM (genProc table) procs
       return procCodes
 
+-------------------------------------------------------------------------------
+-- genCode is called to start generating code for the Goat program
+-------------------------------------------------------------------------------
 genCode :: GoatProgram -> GlobalSymTable -> [ProcCode]
 genCode (GoatProgram procs) table
   = do 
