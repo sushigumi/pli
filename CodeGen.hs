@@ -374,23 +374,46 @@ genReadInstr BoolType = [CallBuiltin ReadBool]
 
 genStmt :: (GlobalSymTable, ProcSymTable) -> Stmt -> Codegen [Instr]
 
-genStmt (table, pTable) (Assign _ (LId _ ident) expr)
-  = do 
-      let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
-          (exprPlace, loadInstr) = case mode of
-                                     Val -> ((Reg 0), [])
-                                     Ref -> ((Reg 1), [Load (Reg 0) slot])
-          storeInstr = case mode of
-                         Val -> [Store slot exprPlace]
-                         Ref -> [StoreIndr (Reg 0) exprPlace]
-      (eType, eInstrs) <- genExpr exprPlace pTable Nothing Nothing Nothing expr
+--genStmt (table, pTable) (Assign _ (LId _ ident) expr)
+--  = do 
+--      let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
+--          (exprPlace, loadInstr) = case mode of
+--                                     Val -> ((Reg 0), [])
+--                                     Ref -> ((Reg 1), [Load (Reg 0) slot])
+--          storeInstr = case mode of
+--                         Val -> [Store slot exprPlace]
+--                         Ref -> [StoreIndr (Reg 0) exprPlace]
+--      (eType, eInstrs) <- genExpr exprPlace pTable Nothing Nothing Nothing expr
+--
+--      let convInstr = if (baseType == FloatType && eType == IntType) then
+--                        [IntToReal exprPlace exprPlace]
+--                      else
+--                        []
+--        
+--      return $ loadInstr ++ eInstrs ++ convInstr ++ storeInstr
 
-      let convInstr = if (baseType == FloatType && eType == IntType) then
-                        [IntToReal exprPlace exprPlace]
+genStmt (table, pTable) (Assign _ (LId _ ident) expr)
+  = do
+      let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
+      (eType, eInstrs) <- genExpr eReg pTable Nothing Nothing Nothing expr
+      
+      let storeInstr = case mode of 
+                         Val -> [Store slot eReg]    
+                         Ref -> [(Load refReg slot),
+                                 (StoreIndr refReg eReg)]
+      
+          convInstr = if (baseType == FloatType && eType == IntType) then
+                        [IntToReal eReg eReg]
                       else
                         []
-        
-      return $ loadInstr ++ eInstrs ++ convInstr ++ storeInstr
+
+          instrs = eInstrs ++ convInstr ++ storeInstr 
+
+      return instrs
+
+  where
+    eReg = Reg 0
+    refReg = Reg 1
 
 genStmt (table, pTable) (Assign _ (LArrayRef _ ident nexpr) expr)
   = do
@@ -407,7 +430,7 @@ genStmt (table, pTable) (Assign _ (LArrayRef _ ident nexpr) expr)
                         [IntToReal eReg eReg]
                       else
                         []
-          instrs = loadInstr ++ nInstrs ++ eInstrs ++ subOff ++ convInstr ++ 
+          instrs = nInstrs ++ eInstrs ++ loadInstr ++ subOff ++ convInstr ++ 
                    storeInstr
     
       return $ instrs
@@ -437,7 +460,7 @@ genStmt (table, pTable) (Assign _ (LMatrixRef _ ident mexpr nexpr) expr)
                       else
                         []
 
-          instrs = loadInstr ++ mInstrs ++ nInstrs ++ eInstrs ++ subOff ++
+          instrs = mInstrs ++ nInstrs ++ eInstrs ++ loadInstr ++ subOff ++
                      convInstr ++ storeInstr
       return $ instrs
   where
