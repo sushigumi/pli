@@ -225,10 +225,9 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (Not _ expr)
  = do
      let eFalse = tLabel
          eTrue = fLabel
-     (eType, eInstrs) <- genExpr r procTable Nothing Nothing 
+     (eType, eInstrs) <- genExpr r procTable (Just eTrue) (Just eFalse)
                            Nothing expr
-     let instrs = eInstrs ++ [BranchOnFalse r tLabel]
-     return (BoolType, instrs)
+     return (BoolType, eInstrs)
 
 genExpr r procTable Nothing Nothing _ (Not _ expr)
   = do
