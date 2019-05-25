@@ -519,4 +519,4 @@ analyse (GoatProgram procs)
           if ident == "main" then
             checkOneMain ps True
           else
-            checkOneMain ps False
+            checkOneMain ps hasMain
