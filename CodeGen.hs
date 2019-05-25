@@ -76,9 +76,12 @@ genIntToReal r1 r2 b1 b2
 genExpr :: Reg -> ProcSymTable -> Maybe Label -> Maybe Label -> Maybe ArgMode
            -> Expr -> Codegen (BaseType, [Instr])
 genExpr r pTable (Just tLabel) (Just fLabel) _ (BoolConst _ val)
-  | val == True = return (BoolType, [(IntConstI r 1), (BranchOnFalse r fLabel), (BranchOnTrue r tLabel)])
+  | val == True = return (BoolType, [(IntConstI r 1),
+                                     (BranchOnFalse r fLabel),
+                                     (BranchOnTrue r tLabel)])
   | val == False = return (BoolType, [(IntConstI r 0),
-                                      (BranchOnFalse r fLabel), (BranchOnTrue r tLabel)])
+                                      (BranchOnFalse r fLabel), 
+                                      (BranchOnTrue r tLabel)])
 genExpr r _ _ _ _ (BoolConst _ val)
   | val == True =  return (BoolType, [IntConstI r 1])
   | val == False = return (BoolType, [IntConstI r 0])
@@ -159,7 +162,8 @@ genExpr r procTable _ _ _ (ArrayRef _ ident nexpr)
     (Reg baseReg) = r
     nReg = Reg (baseReg + 1)
 
-genExpr r procTable tLabelMaybe fLabelMaybe callMode (MatrixRef _ ident mexpr nexpr)
+genExpr r procTable tLabelMaybe fLabelMaybe callMode (MatrixRef _ ident mexpr 
+  nexpr)
   = do
       let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident procTable
           (MatrixInfo m _) = info
