@@ -40,7 +40,7 @@ import Data.Maybe
 
 logError :: String -> Pos -> IO ()
 logError str (line, col)
-  = putStrLn $ str ++ "at line " ++ (show line) ++ " column " ++ (show col)
+  = putStrLn $ str ++ " at line " ++ (show line) ++ " column " ++ (show col)
 
 
 aExpr :: ProcSymTable -> Expr -> IO BaseType
@@ -88,7 +88,7 @@ aExpr pTable (MatrixRef pos ident e1 e2)
       e1Type <- aExpr pTable e1
       e2Type <- aExpr pTable e2
 
-      if e1Type /= IntType || e2Type /= IntType then
+      if e1Type /= IntType && e2Type /= IntType then
         do
           logError "invalid array access" pos
           exitWith (ExitFailure 4)
@@ -154,14 +154,14 @@ aExpr pTable (RelExpr pos relop e1 e2)
           return BoolType 
       else
         case e1Type of
-          IntType -> if (e2Type /= IntType || e2Type /= FloatType) then 
+          IntType -> if (e2Type /= IntType && e2Type /= FloatType) then 
                        do
                          logError "invalid operand type" pos
                          exitWith (ExitFailure 4)
                      else
                        return BoolType
 
-          FloatType -> if (e2Type /= IntType || e2Type /= FloatType) then 
+          FloatType -> if (e2Type /= IntType && e2Type /= FloatType) then 
                          do
                            logError "invalid operand type" pos
                            exitWith (ExitFailure 4)
@@ -182,7 +182,7 @@ aExpr pTable (BinopExpr pos binop e1 e2)
       e1Type <- aExpr pTable e1
       e2Type <- aExpr pTable e2
 
-      if (e1Type == BoolType || e2Type == BoolType) then
+      if (e1Type == BoolType && e2Type == BoolType) then
         do
           logError "bool not supported in binary operations" pos
           exitWith (ExitFailure 4)
