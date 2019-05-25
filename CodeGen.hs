@@ -108,7 +108,7 @@ genExpr r procTable _ _ (Just Ref) (ArrayRef _ ident nexpr)
     (Reg baseReg) = r
     nReg = Reg (baseReg + 1)
 
-genExpr r procTable _ (Just tLabel) (Just fLabel) (ArrayRef _ ident nexpr)
+genExpr r procTable (Just tLabel) (Just fLabel) _ (ArrayRef _ ident nexpr)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
           loadInstr = [LoadAddr r s]
