@@ -60,12 +60,6 @@ genExpr r pTable (Just tLabel) (Just fLabel) _ (BoolConst _ val)
   | val == True = return (BoolType, [(IntConstI r 1)])
   | val == False = return (BoolType, [(IntConstI r 0),
                                       (BranchOnFalse r fLabel)])
-
-genExpr r procTable (Just tLabel) (Just fLabel) _ (Id _ ident)
-  = do
-      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
-      return (baseType, [(Load r s), (BranchOnFalse r fLabel)])
-
 genExpr r _ _ _ _ (BoolConst _ val)
   | val == True =  return (BoolType, [IntConstI r 1])
   | val == False = return (BoolType, [IntConstI r 0])
@@ -83,6 +77,15 @@ genExpr r procTable _ _ (Just Ref) (Id _ ident)
   = do
       let (VarInfo baseType _ s _) = fromJust $ getVarInfo ident procTable
       return (baseType, [LoadAddr r s])
+
+genExpr r procTable (Just tLabel) (Just fLabel) _ (Id _ ident)
+  = do
+      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
+          instrs = case mode of
+                     Val -> [Load r s]
+                     Ref -> [(Load r s), (LoadIndr r r)]
+      return (baseType, (instrs ++ [BranchOnFalse r fLabel]))
+
 
 genExpr r procTable _ _ _ (Id _ ident)
   = do
@@ -436,7 +439,7 @@ genStmt (table, pTable) (Read _ (LId _ ident))
                          Val -> [Store s (Reg 0)]
                          Ref -> [StoreIndr (Reg 1) (Reg 0)]
 
-      return $ loadInstr ++ readInstr ++ storeInstr
+      return $ readInstr ++ loadInstr ++ storeInstr
 
 
 genStmt (table, pTable) (Read _ (LArrayRef _ ident nexpr))
