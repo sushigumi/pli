@@ -84,8 +84,8 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (Id _ ident)
           instrs = case mode of
                      Val -> [Load r s]
                      Ref -> [(Load r s), (LoadIndr r r)]
-      return (baseType, (instrs ++ [BranchOnFalse r fLabel]))
-
+      return (baseType, (instrs ++ [(BranchOnFalse r fLabel), 
+                                    (BranchOnTrue r tLabel)]))
 
 genExpr r procTable _ _ _ (Id _ ident)
   = do
@@ -108,6 +108,22 @@ genExpr r procTable _ _ (Just Ref) (ArrayRef _ ident nexpr)
     (Reg baseReg) = r
     nReg = Reg (baseReg + 1)
 
+genExpr r procTable _ (Just tLabel) (Just fLabel) (ArrayRef _ ident nexpr)
+  = do
+      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
+          loadInstr = [LoadAddr r s]
+          offset = [BinopInstr SubOff r r nReg]
+          loadIndr = [LoadIndr r r]
+      (nType, nInstrs) <- genExpr nReg procTable Nothing Nothing Nothing nexpr
+      let instrs = loadInstr ++ nInstrs ++ offset ++ loadIndr ++ 
+                     [(BranchOnFalse r fLabel), (BranchOnTrue r tLabel)]
+
+      return (baseType, instrs)
+  where
+    (Reg baseReg) = r
+    nReg = Reg (baseReg + 1)
+
+
 genExpr r procTable _ _ _ (ArrayRef _ ident nexpr)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
@@ -122,7 +138,7 @@ genExpr r procTable _ _ _ (ArrayRef _ ident nexpr)
     (Reg baseReg) = r
     nReg = Reg (baseReg + 1)
 
-genExpr r procTable _ _ callMode (MatrixRef _ ident mexpr nexpr)
+genExpr r procTable tLabelMaybe fLabelMaybe callMode (MatrixRef _ ident mexpr nexpr)
   = do
       let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident procTable
           (MatrixInfo m _) = info
@@ -134,10 +150,17 @@ genExpr r procTable _ _ callMode (MatrixRef _ ident mexpr nexpr)
           loadIndr = case callMode of
                        Just Ref -> []
                        _ -> [LoadIndr r r]
+
+          branchInstrs = case tLabelMaybe of
+                           (Just tLabel) -> let (Just fLabel) = fLabelMaybe in
+                                              [(BranchOnFalse r fLabel),
+                                               (BranchOnTrue r tLabel)]
+                           Nothing -> []
             
       (mType, mInstrs) <- genExpr mReg procTable Nothing Nothing Nothing mexpr
       (nType, nInstrs) <- genExpr nReg procTable Nothing Nothing Nothing nexpr
-      let instrs = loadInstr ++ mInstrs ++ nInstrs ++ offset ++ loadIndr
+      let instrs = loadInstr ++ mInstrs ++ nInstrs ++ offset ++ loadIndr ++
+                     branchInstrs
       return (baseType, instrs)
   where
     (Reg baseReg) = r
@@ -228,9 +251,9 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (Not _ expr)
  = do
      let eFalse = tLabel
          eTrue = fLabel
-     (eType, eInstrs) <- genExpr r procTable (Just tLabel) (Just fLabel)
+     (eType, eInstrs) <- genExpr r procTable (Just eTrue) (Just eFalse)
                            Nothing expr
-     return (BoolType, (eInstrs ++ [UnopInstr NotI r r]))
+     return (BoolType, eInstrs)
 
 genExpr r procTable Nothing Nothing _ (Not _ expr)
   = do
