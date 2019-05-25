@@ -224,7 +224,8 @@ genExpr r procTable Nothing Nothing _ (And _ e1 e2)
       (e2Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing Nothing e2
       afterInstrs <- genLabel after
       let e1False = [BranchOnFalse e1Place after]
-          instrs = e1Instrs ++ e1False ++ e2Instrs ++ afterInstrs
+          instrs = e1Instrs ++ e1False ++ e2Instrs ++
+            [BinopInstr AndI r e1Place e2Place] ++ afterInstrs
       return $ (BoolType, instrs)
   where
     (Reg ePlace) = r
@@ -269,7 +270,8 @@ genExpr r procTable Nothing Nothing _ (Or _ e1 e2)
                               Nothing e2
       afterInstrs <- genLabel after
       let e1True = [BranchOnTrue e1Place after]
-          instrs = e1Instrs ++ e1True ++ e2Instrs ++ afterInstrs
+          instrs = e1Instrs ++ e1True ++ e2Instrs ++
+            [BinopInstr OrI r e1Place e2Place] ++ afterInstrs
       return (BoolType, instrs)
       
   where
