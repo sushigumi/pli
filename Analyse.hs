@@ -59,7 +59,7 @@ checkMatrixExprType pTable pos e1 e2
       e1Type <- aExpr pTable e1
       e2Type <- aExpr pTable e2
 
-      if e1Type /= IntType && e2Type /= IntType then
+      if e1Type /= IntType || e2Type /= IntType then
         do
           logError "matrix accessor should be of type int" pos
           exitWith (ExitFailure 4)
@@ -163,7 +163,7 @@ aExpr pTable (MatrixRef pos ident e1 e2)
       e1Type <- aExpr pTable e1
       e2Type <- aExpr pTable e2
 
-      if e1Type /= IntType && e2Type /= IntType then
+      if e1Type /= IntType || e2Type /= IntType then
         do
           logError "invalid array access" pos
           exitWith (ExitFailure 4)
@@ -188,7 +188,7 @@ aExpr pTable (And pos e1 e2)
       e1Type <- aExpr pTable e1
       e2Type <- aExpr pTable e2
     
-      if e1Type /= BoolType && e2Type /= BoolType then
+      if e1Type /= BoolType || e2Type /= BoolType then
         do
           logError "binary operator '&&' requires two bool operands" pos
           exitWith (ExitFailure 4)
@@ -201,7 +201,7 @@ aExpr pTable (Or pos e1 e2)
       e1Type <- aExpr pTable e1
       e2Type <- aExpr pTable e2
     
-      if e1Type /= BoolType && e2Type /= BoolType then
+      if e1Type /= BoolType || e2Type /= BoolType then
         do
           logError "binary operator '||' requires two bool operands" pos
           exitWith (ExitFailure 4)
@@ -263,7 +263,7 @@ aExpr pTable (BinopExpr pos binop e1 e2)
       e1Type <- aExpr pTable e1
       e2Type <- aExpr pTable e2
 
-      if (e1Type == BoolType && e2Type == BoolType) then
+      if (e1Type == BoolType || e2Type == BoolType) then
         do
           logError "bool not supported in binary operations" pos
           exitWith (ExitFailure 4)
