@@ -217,9 +217,14 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (And _ e1 e2)
 
 genExpr r procTable Nothing Nothing _ (And _ e1 e2)
   = do
+      afterLabel <- getLabelCounter
+      incLabelCounter
+      let after = show afterLabel
       (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing Nothing e1
       (e2Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing Nothing e2
-      let instrs = e1Instrs ++ e2Instrs ++ [BinopInstr AndI r e1Place e2Place]
+      afterInstrs <- genLabel after
+      let e1False = [BranchOnFalse e1Place after]
+          instrs = e1Instrs ++ e1False ++ e2Instrs ++ afterInstrs
       return $ (BoolType, instrs)
   where
     (Reg ePlace) = r
@@ -255,11 +260,16 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (Or _ e1 e2)
       
 genExpr r procTable Nothing Nothing _ (Or _ e1 e2)
   = do
+      afterLabel <- getLabelCounter
+      incLabelCounter
+      let after = show afterLabel
       (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing 
                               Nothing e1
       (e1Type, e2Instrs) <- genExpr e2Place procTable Nothing Nothing 
                               Nothing e2
-      let instrs = e1Instrs ++ e2Instrs ++ [BinopInstr OrI r e1Place e2Place]
+      afterInstrs <- genLabel after
+      let e1True = [BranchOnTrue e1Place after]
+          instrs = e1Instrs ++ e1True ++ e2Instrs ++ afterInstrs
       return (BoolType, instrs)
       
   where
