@@ -600,8 +600,7 @@ genStmt (table, pTable) (While _ expr stmts)
                             Nothing expr
       sBodyInstr <- genLabel sBody
       sInstrs <- mapM (genStmt (table, pTable)) stmts
-      (sType, gotoSBegin) <- genExpr ePlace pTable (Just eTrue) (Just eFalse) 
-                            Nothing expr
+      gotoSBegin <- genUncond sBegin
       sAfterInstr <- genLabel sAfter
 
       let instrs = sBeginInstr ++ eInstrs ++ sBodyInstr ++ (concat sInstrs) ++
