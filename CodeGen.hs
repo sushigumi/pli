@@ -572,7 +572,8 @@ genStmt (table, pTable) (ProcCall _ ident exprs)
           let (ProcArg _ argMode baseType _) = args !! i
           (eType, eInstrs) <- genExpr (Reg i) pTable Nothing Nothing 
                                 (Just argMode) e
-          let convInstr = if baseType == FloatType && argMode == Val then
+          let convInstr = if eType /= FloatType &&
+                          baseType == FloatType && argMode == Val then
                             [IntToReal (Reg i) (Reg i)]
                           else
                             []
