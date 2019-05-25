@@ -75,8 +75,10 @@ genExpr r _ _ _ _ (StrConst _ val)
 
 genExpr r procTable _ _ (Just Ref) (Id _ ident)
   = do
-      let (VarInfo baseType _ s _) = fromJust $ getVarInfo ident procTable
-      return (baseType, [LoadAddr r s])
+      let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
+      case mode of
+        Val -> return (baseType, [LoadAddr r s])
+        Ref -> return (baseType, [Load r s])
 
 genExpr r procTable (Just tLabel) (Just fLabel) _ (Id _ ident)
   = do
@@ -568,6 +570,7 @@ genStmt (table, pTable) (ProcCall _ ident exprs)
     genExprs (e:exprs) i instrs
       = do
           let (ProcArg _ argMode _ _) = args !! i
+--
           (eType, eInstrs) <- genExpr (Reg i) pTable Nothing Nothing 
                                 (Just argMode) e
           let instrs1 = instrs ++ eInstrs
