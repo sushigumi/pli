@@ -42,7 +42,82 @@ logError :: String -> Pos -> IO ()
 logError str (line, col)
   = putStrLn $ str ++ " at line " ++ (show line) ++ " column " ++ (show col)
 
+checkArrayExprType :: ProcSymTable -> Pos -> Expr -> IO ()
+checkArrayExprType pTable pos e
+  = do
+      eType <- aExpr pTable e
+      if eType /= IntType then
+        do
+          logError "array accessor should be of type int" pos
+          exitWith (ExitFailure 4)
+      else
+        return ()
 
+checkMatrixExprType :: ProcSymTable -> Pos -> Expr -> Expr -> IO ()
+checkMatrixExprType pTable pos e1 e2
+  = do
+      e1Type <- aExpr pTable e1
+      e2Type <- aExpr pTable e2
+
+      if e1Type /= IntType && e2Type /= IntType then
+        do
+          logError "matrix accessor should be of type int" pos
+          exitWith (ExitFailure 4)
+      else
+        return ()
+ 
+
+aLvalue :: ProcSymTable -> Lvalue -> IO BaseType
+aLvalue pTable (LId pos ident) 
+  = do
+      let idInfo = getVarInfo ident pTable
+      case idInfo of
+        Just (VarInfo bType _ _ info) 
+          -> case info of
+               IdInfo -> return bType
+               _ -> do
+                      logError (ident ++ " should be an identifier") pos
+                      exitWith (ExitFailure 4)
+        Nothing 
+          -> do
+               logError "undeclared variable" pos
+               exitWith (ExitFailure 4)
+
+aLvalue pTable (LArrayRef pos ident e)
+  = do
+      checkArrayExprType pTable pos e
+
+      let arrayInfo = getVarInfo ident pTable
+      case arrayInfo of
+        Just (VarInfo bType _ _ info)
+          -> case info of
+               ArrayInfo _ -> return bType
+               _ -> do
+                      logError (ident ++ " should be an array") pos
+                      exitWith (ExitFailure 4)
+        Nothing 
+          -> do
+               logError "undeclared variable" pos
+               exitWith (ExitFailure 4)
+
+pLvalue pTable (LMatrixRef pos ident e1 e2)
+  = do
+      checkMatrixExprType pTable pos e1 e2
+     
+      let matrixInfo = getVarInfo ident pTable
+      case matrixInfo of
+        Just (VarInfo bType _ _ info)
+          -> case info of
+               MatrixInfo _ _ -> return bType
+               _ -> do
+                      logError (ident ++ " should be a matrix") pos
+                      exitWith (ExitFailure 4)
+        Nothing
+          -> do
+               logError "undeclared variable" pos
+               exitWith (ExitFailure 4)
+
+                      
 aExpr :: ProcSymTable -> Expr -> IO BaseType
 aExpr _ (BoolConst pos _)
   = return BoolType
@@ -69,20 +144,20 @@ aExpr pTable (Id pos ident)
       
 aExpr pTable (ArrayRef pos ident expr)
   = do
+      checkArrayExprType pTable pos expr
       let arrayInfo = getVarInfo ident pTable
-      arrayType <- case arrayInfo of  
-                     Just (VarInfo bType _ _ _) -> return bType
-                     Nothing -> do
-                                  logError "undeclared variable" pos
-                                  exitWith (ExitFailure 4)
-      eType <- aExpr pTable expr
-      if eType /= IntType then
-        do 
-          logError "invalid array access" pos
-          exitWith (ExitFailure 4)
-      else
-        return arrayType
-    
+      (aType, info) <- case arrayInfo of  
+                         Just (VarInfo bType _ _ info) -> return (bType, info)
+                         Nothing -> do
+                                      logError "undeclared variable" pos
+                                      exitWith (ExitFailure 4)
+
+      case info of 
+        ArrayInfo _ -> return aType
+        _ -> do
+               logError (ident ++ " should have array type") pos
+               exitWith (ExitFailure 4)
+        
 aExpr pTable (MatrixRef pos ident e1 e2)
   = do
       e1Type <- aExpr pTable e1
@@ -95,9 +170,15 @@ aExpr pTable (MatrixRef pos ident e1 e2)
 
       else  
         do
+          checkMatrixExprType pTable pos e1 e2
           let matrixInfo = getVarInfo ident pTable
           case matrixInfo of
-            Just (VarInfo bType _ _ _) -> return bType
+            Just (VarInfo bType _ _ info)
+              -> case info of
+                   MatrixInfo _ _ -> return bType
+                   _ -> do
+                          logError (ident ++ " should have matrix type") pos
+                          exitWith (ExitFailure 4)
             Nothing -> do
                          logError "undeclared variable" pos
                          exitWith (ExitFailure 4)
@@ -267,7 +348,9 @@ aStmt (table, pTable) (Assign pos lvalue expr)
               (LMatrixRef _ i _ _) -> i
 
 aStmt (table, pTable) (Read pos lvalue)
-  = return ()
+  = do
+      aLvalue pTable lvalue
+      return ()
 
 aStmt (table, pTable) (Write pos expr) 
   = do
