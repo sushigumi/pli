@@ -461,25 +461,21 @@ aProc table (Proc pos ident args decls stmts)
 -- This step is done before proceeding to each procedure's inside semantic 
 -- analysis
 -------------------------------------------------------------------------------
-initAnalyse :: [Proc] -> GlobalSymTable -> GlobalSymTable
+initAnalyse :: [Proc] -> GlobalSymTable -> IO GlobalSymTable
 initAnalyse [] table
-  = table
+  = return table
 initAnalyse ((Proc pos ident args decls stmts):procs) table
-  = initAnalyse procs table1
-  where
-    procSymTable 
-      = case getProcInfo ident table of
-          Just (ProcInfo _ procTable) -> procTable
-          Nothing -> do 
-                       logError "undeclared procedure" pos
-                       exitWith (ExitFailure 4)
-    
-    (newSlot, procSymTable1) = insertArgs args 0 procSymTable
-
-    procSymTable2 = insertVars decls newSlot procSymTable1
-
-    table1 = updateProcSymTable ident args procSymTable2 table
-
+  = case getProcInfo ident table of
+      Just (ProcInfo _ procTable) 
+        -> do 
+             let (newSlot, procTable1) = insertArgs args 0 procTable
+                 procTable2 = insertVars decls newSlot procTable1 
+                 table1 = updateProcSymTable ident args procTable2 table
+             initAnalyse procs table1
+      Nothing 
+        -> do
+             logError "undeclared procedure" pos
+             exitWith (ExitFailure 4)
 
 -------------------------------------------------------------------------------
 -- analyse starts the semantic analysis of the Goat program
@@ -499,7 +495,7 @@ analyse (GoatProgram procs)
       case procInfo of
         Just (ProcInfo _ _) 
           -> do
-               let globalTable = initAnalyse procs startTable
+               globalTable <- initAnalyse procs startTable
                mapM_ (aProc globalTable) procs
                return globalTable
         Nothing -> do
