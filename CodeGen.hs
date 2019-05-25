@@ -76,9 +76,9 @@ genIntToReal r1 r2 b1 b2
 genExpr :: Reg -> ProcSymTable -> Maybe Label -> Maybe Label -> Maybe ArgMode
            -> Expr -> Codegen (BaseType, [Instr])
 genExpr r pTable (Just tLabel) (Just fLabel) _ (BoolConst _ val)
-  | val == True = return (BoolType, [(IntConstI r 1)])
+  | val == True = return (BoolType, [(IntConstI r 1), (BranchOnFalse r fLabel), (BranchOnTrue r tLabel)])
   | val == False = return (BoolType, [(IntConstI r 0),
-                                      (BranchOnFalse r fLabel)])
+                                      (BranchOnFalse r fLabel), (BranchOnTrue r tLabel)])
 genExpr r _ _ _ _ (BoolConst _ val)
   | val == True =  return (BoolType, [IntConstI r 1])
   | val == False = return (BoolType, [IntConstI r 0])
