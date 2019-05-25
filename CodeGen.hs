@@ -569,11 +569,14 @@ genStmt (table, pTable) (ProcCall _ ident exprs)
       = return instrs
     genExprs (e:exprs) i instrs
       = do
-          let (ProcArg _ argMode _ _) = args !! i
---
+          let (ProcArg _ argMode baseType _) = args !! i
           (eType, eInstrs) <- genExpr (Reg i) pTable Nothing Nothing 
                                 (Just argMode) e
-          let instrs1 = instrs ++ eInstrs
+          let convInstr = if baseType == FloatType && argMode == Val then
+                            [IntToReal (Reg i) (Reg i)]
+                          else
+                            []
+              instrs1 = instrs ++ eInstrs ++ convInstr
           genExprs exprs (i+1) instrs1 
 
     procLabel = "label_" ++ ident
