@@ -24,12 +24,18 @@ type LabelCounter = Int
 type Codegen a
   = State LabelCounter a
 
+-------------------------------------------------------------------------------
+-- This function adds a label to the instruction and get this label
+-------------------------------------------------------------------------------
 getLabelCounter :: Codegen LabelCounter
 getLabelCounter 
   = do
       label <- get
       return label
 
+-------------------------------------------------------------------------------
+-- Increase the current label counter by 1
+-------------------------------------------------------------------------------
 incLabelCounter :: Codegen ()
 incLabelCounter
   = do
@@ -75,6 +81,11 @@ genIntToReal r1 r2 b1 b2
 -------------------------------------------------------------------------------
 genExpr :: Reg -> ProcSymTable -> Maybe Label -> Maybe Label -> Maybe ArgMode
            -> Expr -> Codegen (BaseType, [Instr])
+
+-------------------------------------------------------------------------------
+-- Handle conditional statement if, while where conditional expression is a
+-- bool constant
+-------------------------------------------------------------------------------
 genExpr r pTable (Just tLabel) (Just fLabel) _ (BoolConst _ val)
   | val == True = return (BoolType, [(IntConstI r 1),
                                      (BranchOnFalse r fLabel),
@@ -82,19 +93,34 @@ genExpr r pTable (Just tLabel) (Just fLabel) _ (BoolConst _ val)
   | val == False = return (BoolType, [(IntConstI r 0),
                                       (BranchOnFalse r fLabel), 
                                       (BranchOnTrue r tLabel)])
+-------------------------------------------------------------------------------
+-- Handle bool constant
+-------------------------------------------------------------------------------
 genExpr r _ _ _ _ (BoolConst _ val)
   | val == True =  return (BoolType, [IntConstI r 1])
   | val == False = return (BoolType, [IntConstI r 0])
 
+-------------------------------------------------------------------------------
+-- Handle int constant
+-------------------------------------------------------------------------------
 genExpr r _ _ _ _ (IntConst _ val)
   = return (IntType, [IntConstI r val])
 
+-------------------------------------------------------------------------------
+-- Handle float constant
+-------------------------------------------------------------------------------
 genExpr r _ _ _ _ (FloatConst _ val)
   = return (FloatType, [RealConstI r val])
 
+-------------------------------------------------------------------------------
+-- Handle string constant
+-------------------------------------------------------------------------------
 genExpr r _ _ _ _ (StrConst _ val)
   = return (StringType, [StringConstI r val])
 
+-------------------------------------------------------------------------------
+-- Handle identifier passed by reference
+-------------------------------------------------------------------------------
 genExpr r procTable _ _ (Just Ref) (Id _ ident)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
@@ -102,6 +128,10 @@ genExpr r procTable _ _ (Just Ref) (Id _ ident)
         Val -> return (baseType, [LoadAddr r s])
         Ref -> return (baseType, [Load r s])
 
+-------------------------------------------------------------------------------
+-- Handle conditional statement if, while where condional checking expression
+-- is an identifier
+-------------------------------------------------------------------------------
 genExpr r procTable (Just tLabel) (Just fLabel) _ (Id _ ident)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
@@ -111,6 +141,9 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (Id _ ident)
       return (baseType, (instrs ++ [(BranchOnFalse r fLabel), 
                                     (BranchOnTrue r tLabel)]))
 
+-------------------------------------------------------------------------------
+-- Handle identifier variable
+-------------------------------------------------------------------------------
 genExpr r procTable _ _ _ (Id _ ident)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable 
@@ -118,6 +151,9 @@ genExpr r procTable _ _ _ (Id _ ident)
         Val -> return (baseType, [Load r s])
         Ref -> return (baseType, [(Load r s), (LoadIndr r r)])
 
+-------------------------------------------------------------------------------
+-- Handle array passed by reference
+-------------------------------------------------------------------------------
 genExpr r procTable _ _ (Just Ref) (ArrayRef _ ident nexpr)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
@@ -132,6 +168,10 @@ genExpr r procTable _ _ (Just Ref) (ArrayRef _ ident nexpr)
     (Reg baseReg) = r
     nReg = Reg (baseReg + 1)
 
+-------------------------------------------------------------------------------
+-- Handle conditional checking if, while where conditional checking expression
+-- is an array element
+-------------------------------------------------------------------------------
 genExpr r procTable (Just tLabel) (Just fLabel) _ (ArrayRef _ ident nexpr)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
@@ -147,7 +187,9 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (ArrayRef _ ident nexpr)
     (Reg baseReg) = r
     nReg = Reg (baseReg + 1)
 
-
+-------------------------------------------------------------------------------
+-- Handle array element expression
+-------------------------------------------------------------------------------
 genExpr r procTable _ _ _ (ArrayRef _ ident nexpr)
   = do
       let (VarInfo baseType mode s _) = fromJust $ getVarInfo ident procTable
@@ -162,6 +204,9 @@ genExpr r procTable _ _ _ (ArrayRef _ ident nexpr)
     (Reg baseReg) = r
     nReg = Reg (baseReg + 1)
 
+-------------------------------------------------------------------------------
+-- Handle matrix element expression
+-------------------------------------------------------------------------------
 genExpr r procTable tLabelMaybe fLabelMaybe callMode (MatrixRef _ ident mexpr 
   nexpr)
   = do
@@ -193,6 +238,10 @@ genExpr r procTable tLabelMaybe fLabelMaybe callMode (MatrixRef _ ident mexpr
     nReg = Reg (baseReg + 2)
     constReg = Reg (baseReg + 3)
 
+-------------------------------------------------------------------------------
+-- Handle conditional checking statement where conditional checking expression
+-- has operand &&
+-------------------------------------------------------------------------------
 genExpr r procTable (Just tLabel) (Just fLabel) _ (And _ e1 e2)
   = do
       e1TrueLabel <- getLabelCounter
@@ -218,7 +267,9 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (And _ e1 e2)
     
       return (BoolType, instrs)
 
-
+-------------------------------------------------------------------------------
+-- Handle expression with && operand inside
+-------------------------------------------------------------------------------
 genExpr r procTable Nothing Nothing _ (And _ e1 e2)
   = do
       afterLabel <- getLabelCounter
@@ -237,6 +288,10 @@ genExpr r procTable Nothing Nothing _ (And _ e1 e2)
     e2Place = Reg (ePlace + 1)
 
 
+-------------------------------------------------------------------------------
+-- Handle conditional checking statement where conditional checking expression
+-- has || inside
+-------------------------------------------------------------------------------
 genExpr r procTable (Just tLabel) (Just fLabel) _ (Or _ e1 e2)
   = do
       e1FalseLabel <- getLabelCounter
@@ -262,7 +317,9 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (Or _ e1 e2)
     
       return (BoolType, instrs)
      
-      
+-------------------------------------------------------------------------------
+-- Handle expression with || inside
+-------------------------------------------------------------------------------
 genExpr r procTable Nothing Nothing _ (Or _ e1 e2)
   = do
       afterLabel <- getLabelCounter
@@ -283,6 +340,10 @@ genExpr r procTable Nothing Nothing _ (Or _ e1 e2)
     e1Place = Reg ePlace 
     e2Place = Reg (ePlace + 1)
 
+-------------------------------------------------------------------------------
+-- Handle conditional checking statement with conditional checking expression
+-- has ! operand
+-------------------------------------------------------------------------------
 genExpr r procTable (Just tLabel) (Just fLabel) _ (Not _ expr)
  = do
      let eFalse = tLabel
@@ -291,12 +352,19 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (Not _ expr)
                            Nothing expr
      return (BoolType, eInstrs)
 
+-------------------------------------------------------------------------------
+-- Handle epxression with ! operand
+-------------------------------------------------------------------------------
 genExpr r procTable Nothing Nothing _ (Not _ expr)
   = do
       (eType, eInstrs) <- genExpr r procTable Nothing Nothing Nothing expr
       let instrs = eInstrs ++ [UnopInstr NotI r r]
       return (BoolType, instrs)
 
+-------------------------------------------------------------------------------
+-- Handle conditional checking statement where conditional checking expression
+-- has operand >, >=, ==, <=, <, != inside
+-------------------------------------------------------------------------------
 genExpr r procTable (Just tLabel) (Just fLabel) _ (RelExpr _ relop e1 e2)
   = do
       (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing 
@@ -330,6 +398,9 @@ genExpr r procTable (Just tLabel) (Just fLabel) _ (RelExpr _ relop e1 e2)
     e1Place = Reg ePlace
     e2Place = Reg (ePlace + 1)
 
+-------------------------------------------------------------------------------
+-- Handle expression with comparison operand inside
+-------------------------------------------------------------------------------
 genExpr r procTable Nothing Nothing _ (RelExpr _ relop e1 e2)
   = do
       (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing 
@@ -359,7 +430,9 @@ genExpr r procTable Nothing Nothing _ (RelExpr _ relop e1 e2)
     e1Place = Reg ePlace
     e2Place = Reg (ePlace + 1)
 
-
+-------------------------------------------------------------------------------
+-- Handle expression with binary operand inside
+-------------------------------------------------------------------------------
 genExpr r procTable _ _ _ (BinopExpr _ binop e1 e2)
   = do
       (e1Type, e1Instrs) <- genExpr e1Place procTable Nothing Nothing   
@@ -391,6 +464,9 @@ genExpr r procTable _ _ _ (BinopExpr _ binop e1 e2)
     e1Place = Reg ePlace
     e2Place = Reg (ePlace + 1)
 
+-------------------------------------------------------------------------------
+-- Handle expression with unary operand - inside
+-------------------------------------------------------------------------------
 genExpr r procTable _ _ _ (UMinus _ expr)
   = do 
       (exprType, exprInstrs) <- genExpr r procTable Nothing Nothing Nothing expr
@@ -437,6 +513,9 @@ genStmt (table, pTable) (Assign _ (LId _ ident) expr)
     eReg = Reg 0
     refReg = Reg 1
 
+-------------------------------------------------------------------------------
+-- Handle assignment to an array element
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (Assign _ (LArrayRef _ ident nexpr) expr)
   = do
       let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
@@ -462,6 +541,9 @@ genStmt (table, pTable) (Assign _ (LArrayRef _ ident nexpr) expr)
     nReg = (Reg (baseReg + 1))
     eReg = (Reg (baseReg + 2))
 
+-------------------------------------------------------------------------------
+-- Handle assignment to a matrix element
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (Assign _ (LMatrixRef _ ident mexpr nexpr) expr)
   = do
       let (VarInfo baseType mode slot info) = fromJust $ getVarInfo ident pTable
@@ -493,6 +575,9 @@ genStmt (table, pTable) (Assign _ (LMatrixRef _ ident mexpr nexpr) expr)
     constReg = Reg (baseReg + 3)
     eReg = Reg (baseReg + 4)
 
+-------------------------------------------------------------------------------
+-- Handle statement to read to an identifier
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (Read _ (LId _ ident))
   = do
       let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident pTable
@@ -509,7 +594,9 @@ genStmt (table, pTable) (Read _ (LId _ ident))
 
       return $ readInstr ++ loadInstr ++ storeInstr
 
-
+-------------------------------------------------------------------------------
+-- Handle statement to read to an array element
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (Read _ (LArrayRef _ ident nexpr))
   = do
       let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident pTable
@@ -532,6 +619,9 @@ genStmt (table, pTable) (Read _ (LArrayRef _ ident nexpr))
     r = Reg baseReg
     nReg = Reg (baseReg + 1)
 
+-------------------------------------------------------------------------------
+-- Handle statement to read to a matrix element
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (Read _ (LMatrixRef _ ident mexpr nexpr)) 
   = do
       let (VarInfo baseType mode s info) = fromJust $ getVarInfo ident pTable
@@ -562,6 +652,9 @@ genStmt (table, pTable) (Read _ (LMatrixRef _ ident mexpr nexpr))
     nReg = Reg (baseReg + 2)
     constReg = Reg (baseReg + 3)
 
+-------------------------------------------------------------------------------
+-- Handle statement to write and expression
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (Write _ expr)
   = do
       (eType, eInstrs) <- genExpr exprPlace pTable Nothing Nothing Nothing expr
@@ -575,6 +668,9 @@ genStmt (table, pTable) (Write _ expr)
   where
     exprPlace = Reg 0
 
+-------------------------------------------------------------------------------
+-- Handle statement for a function call
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (ProcCall _ ident exprs)
   = do
       eInstrs <- genExprs exprs 0 []
@@ -602,6 +698,9 @@ genStmt (table, pTable) (ProcCall _ ident exprs)
 
     procLabel = "label_" ++ ident
 
+-------------------------------------------------------------------------------
+-- Handle if statement
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (If _ expr stmts)
   = do
       eTrueLabel <- getLabelCounter
@@ -622,7 +721,10 @@ genStmt (table, pTable) (If _ expr stmts)
       let instrs = eInstrs ++ eTrueInstr ++ (concat sInstrs) ++ sAfterInstr
 
       return instrs
-      
+
+-------------------------------------------------------------------------------
+-- Handle if else statement
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (IfElse _ expr s1 s2)
   = do
       eFalseLabel <- getLabelCounter
@@ -651,7 +753,9 @@ genStmt (table, pTable) (IfElse _ expr s1 s2)
 
       return instrs
 
-
+-------------------------------------------------------------------------------
+-- Handle while statement
+-------------------------------------------------------------------------------
 genStmt (table, pTable) (While _ expr stmts) 
   = do
       sBeginLabel <- getLabelCounter

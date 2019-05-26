@@ -58,6 +58,11 @@ checkMatrixExprType pTable pos e1 e2
 -- lvalue analysed
 -------------------------------------------------------------------------------
 aLvalue :: ProcSymTable -> Lvalue -> IO BaseType
+
+-------------------------------------------------------------------------------
+-- Checks single identifier
+-- pos is the position of the identifier
+-------------------------------------------------------------------------------
 aLvalue pTable (LId pos ident) 
   = do
       let idInfo = getVarInfo ident pTable
@@ -73,6 +78,9 @@ aLvalue pTable (LId pos ident)
                logError "undeclared variable" pos
                exitWith (ExitFailure 4)
 
+-------------------------------------------------------------------------------
+-- Check array identifier
+-------------------------------------------------------------------------------
 aLvalue pTable (LArrayRef pos ident e)
   = do
       checkArrayExprType pTable pos e
@@ -90,6 +98,9 @@ aLvalue pTable (LArrayRef pos ident e)
                logError "undeclared variable" pos
                exitWith (ExitFailure 4)
 
+-------------------------------------------------------------------------------
+-- Check matrix identifier
+-------------------------------------------------------------------------------
 aLvalue pTable (LMatrixRef pos ident e1 e2)
   = do
       checkMatrixExprType pTable pos e1 e2
@@ -109,6 +120,7 @@ aLvalue pTable (LMatrixRef pos ident e1 e2)
 
 -------------------------------------------------------------------------------
 -- aExpr does semantic analysis and type checking for expressions
+-- This checks everything that's not an L value
 -------------------------------------------------------------------------------
 aExpr :: ProcSymTable -> Expr -> IO BaseType
 aExpr _ (BoolConst pos _)
@@ -123,6 +135,9 @@ aExpr _ (FloatConst pos _)
 aExpr _ (StrConst pos _)
   = return StringType
 
+-------------------------------------------------------------------------------
+-- Checks single identifier
+-------------------------------------------------------------------------------
 aExpr pTable (Id pos ident)
   = do
       let idInfo = getVarInfo ident pTable
@@ -133,7 +148,10 @@ aExpr pTable (Id pos ident)
                                exitWith (ExitFailure 4)
 
       return idType
-      
+
+-------------------------------------------------------------------------------
+-- Checks array identifer
+-------------------------------------------------------------------------------
 aExpr pTable (ArrayRef pos ident expr)
   = do
       checkArrayExprType pTable pos expr
@@ -149,7 +167,10 @@ aExpr pTable (ArrayRef pos ident expr)
         _ -> do
                logError (ident ++ " should have array type") pos
                exitWith (ExitFailure 4)
-        
+
+-------------------------------------------------------------------------------
+-- Checks matrix identifier
+-------------------------------------------------------------------------------
 aExpr pTable (MatrixRef pos ident e1 e2)
   = do
       e1Type <- aExpr pTable e1
@@ -175,6 +196,9 @@ aExpr pTable (MatrixRef pos ident e1 e2)
                          logError "undeclared variable" pos
                          exitWith (ExitFailure 4)
 
+-------------------------------------------------------------------------------
+-- Checks && expression
+-------------------------------------------------------------------------------
 aExpr pTable (And pos e1 e2)
   = do
       e1Type <- aExpr pTable e1
@@ -188,6 +212,9 @@ aExpr pTable (And pos e1 e2)
       else 
         return BoolType
 
+-------------------------------------------------------------------------------
+-- Checks || expression
+-------------------------------------------------------------------------------
 aExpr pTable (Or pos e1 e2)
   = do
       e1Type <- aExpr pTable e1
@@ -201,6 +228,9 @@ aExpr pTable (Or pos e1 e2)
       else
         return BoolType
 
+-------------------------------------------------------------------------------
+-- Checks ! expression
+-------------------------------------------------------------------------------
 aExpr pTable (Not pos expr)
   = do
       eType <- aExpr pTable expr
@@ -213,6 +243,9 @@ aExpr pTable (Not pos expr)
       else
         return BoolType
 
+-------------------------------------------------------------------------------
+-- Checks comparison operand
+-------------------------------------------------------------------------------
 aExpr pTable (RelExpr pos relop e1 e2)
   = do
       e1Type <- aExpr pTable e1
@@ -250,6 +283,9 @@ aExpr pTable (RelExpr pos relop e1 e2)
 
       return BoolType
 
+-------------------------------------------------------------------------------
+-- Checks binary operand
+-------------------------------------------------------------------------------
 aExpr pTable (BinopExpr pos binop e1 e2)
   = do
       e1Type <- aExpr pTable e1
@@ -290,6 +326,9 @@ aExpr pTable (BinopExpr pos binop e1 e2)
   where 
     errmsg = "operands must be either type int or float"
 
+-------------------------------------------------------------------------------
+-- Checks unary - operand
+-------------------------------------------------------------------------------
 aExpr pTable (UMinus pos expr)
   = do
       eType <- aExpr pTable expr
@@ -322,6 +361,10 @@ getLvalueType Nothing pos
 -- aStmt does semantic analysis on a statement
 -------------------------------------------------------------------------------
 aStmt :: (GlobalSymTable, ProcSymTable) -> Stmt -> IO ()
+
+-------------------------------------------------------------------------------
+-- Checks assignment statement
+-------------------------------------------------------------------------------
 aStmt (table, pTable) (Assign pos lvalue expr) 
   = do
       let lvalueInfo = getVarInfo ident pTable
@@ -346,16 +389,25 @@ aStmt (table, pTable) (Assign pos lvalue expr)
               (LArrayRef _ i _) -> i
               (LMatrixRef _ i _ _) -> i
 
+-------------------------------------------------------------------------------
+-- Checks read statement
+-------------------------------------------------------------------------------
 aStmt (table, pTable) (Read pos lvalue)
   = do
       aLvalue pTable lvalue
       return ()
 
+-------------------------------------------------------------------------------
+-- Checks write statement
+-------------------------------------------------------------------------------
 aStmt (table, pTable) (Write pos expr) 
   = do
       eType <- aExpr pTable expr
       return ()
 
+-------------------------------------------------------------------------------
+-- Checks function call
+-------------------------------------------------------------------------------
 aStmt (table, pTable) (ProcCall pos ident exprs)
   = do
       eTypes <- mapM (aExpr pTable) exprs
@@ -391,6 +443,9 @@ aStmt (table, pTable) (ProcCall pos ident exprs)
                    logError "incorrect procedure parameter types" pos
                    exitWith (ExitFailure 4)
 
+-------------------------------------------------------------------------------
+-- Checks if statement
+-------------------------------------------------------------------------------
 aStmt (table, pTable) (If pos expr stmts)
   = do
       eType <- aExpr pTable expr
@@ -405,6 +460,9 @@ aStmt (table, pTable) (If pos expr stmts)
           mapM_ (aStmt (table, pTable)) stmts
           return ()
 
+-------------------------------------------------------------------------------
+-- Checks if else statement
+-------------------------------------------------------------------------------
 aStmt (table, pTable) (IfElse pos expr s1 s2)
   = do
       eType <- aExpr pTable expr
@@ -421,6 +479,9 @@ aStmt (table, pTable) (IfElse pos expr s1 s2)
 
           return ()
 
+-------------------------------------------------------------------------------
+-- Checks while statement
+-------------------------------------------------------------------------------
 aStmt (table, pTable) (While pos expr stmts)
   = do
       eType <- aExpr pTable expr
